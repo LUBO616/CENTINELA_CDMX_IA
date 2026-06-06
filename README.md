@@ -31,20 +31,20 @@ Demo de flujo 911 asistido por Agentes de IA para Ciudad de México
 
 ## ¿Qué es este proyecto?
 
-**911 AI Flow Demo** es una **demostración educativa** de un sistema de clasificación automática de llamadas de emergencia 911 para Ciudad de México, utilizando IA simulada (determinista, basada en reglas) para:
+CENTINELA_CDMX_IA es una demostración de un sistema de clasificación automática de llamadas de emergencia 911 para Ciudad de México, utilizando agente orquestador y subagentes simulada (determinista, basada en reglas) para:
 
-1. **Redactar PII** (Información Personal Identificable) de transcripciones
-2. **Clasificar riesgo** del 1 al 10 según señales críticas (P0)
-3. **Detectar grupos vulnerables** (NNA, adultos mayores, violencia de género)
-4. **Priorizar atención humana** cuando sea necesario
-5. **Generar métricas** y predicciones para análisis
+1. Redactar PII (Información Personal Identificable) de transcripciones
+2. Clasificar riesgo del 1 al 10 según señales críticas (P0)
+3. Detectar grupos vulnerables (NNA, adultos mayores, violencia de género)
+4. Priorizar atención humana cuando sea necesario
+5. Generar métricas y predicciones para análisis
 
-### ⚠️ Importante
+ #Importante
 
-- **Datos 100% sintéticos**: No se usan datos reales de emergencias
-- **IA simulada**: No usa modelos de ML, solo reglas deterministas
-- **Propósito educativo**: Demo para evaluación técnica, no para producción
-- **No sustituye operadores**: El humano siempre está en el loop
+- Se usan datos reales de emergencias fuentes abiertas gubernamentales
+- Agentes de IA con reglas  reglas deterministas
+- Demo para evaluación técnica
+- Human in the loop
 
 ---
 
