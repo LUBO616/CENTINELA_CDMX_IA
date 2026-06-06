@@ -1,11 +1,12 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { ShieldAlert, LayoutDashboard, PhoneCall, TrendingUp } from "lucide-react";
+import { ShieldAlert, LayoutDashboard, PhoneCall, TrendingUp, MessageSquare } from "lucide-react";
 
 export default function AppShell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const nav = [
     { to: "/", label: "Dashboard", icon: LayoutDashboard },
     { to: "/predictivo", label: "Predictivo", icon: TrendingUp },
+    { to: "/whatsapp-lab", label: "WhatsApp Lab", icon: MessageSquare },
     { to: "/simular", label: "Simular llamada", icon: PhoneCall },
   ];
 

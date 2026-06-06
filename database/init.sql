@@ -152,6 +152,44 @@ CREATE INDEX IF NOT EXISTS idx_predictive_alcaldia ON analytics.predictive_incid
 CREATE INDEX IF NOT EXISTS idx_predictive_human_required ON analytics.predictive_incidents(human_required);
 CREATE INDEX IF NOT EXISTS idx_predictive_synthetic ON analytics.predictive_incidents(synthetic);
 CREATE INDEX IF NOT EXISTS idx_predictive_geom ON analytics.predictive_incidents USING GIST(geom);
+-- Table: analytics.whatsapp_lab_messages
+-- Purpose: Store WhatsApp-style lab messages for demo/testing
+CREATE TABLE IF NOT EXISTS analytics.whatsapp_lab_messages (
+    id SERIAL PRIMARY KEY,
+    message_id TEXT UNIQUE NOT NULL,
+    from_hash TEXT NOT NULL,
+    profile_name TEXT,
+    message_text TEXT NOT NULL,
+    message_text_redacted TEXT NOT NULL,
+    category VARCHAR(50),
+    branch VARCHAR(20) CHECK (branch IN ('low', 'mid', 'critical')),
+    risk_level INTEGER CHECK (risk_level BETWEEN 1 AND 10),
+    human_required BOOLEAN DEFAULT FALSE,
+    p0_signals TEXT[],
+    bot_reply TEXT,
+    source VARCHAR(20) DEFAULT 'webchat',
+    synthetic BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    from_number_redacted VARCHAR(50),
+    location_hint TEXT,
+    location_source VARCHAR(50),
+    incident_time TIMESTAMP,
+    alcaldia_norm VARCHAR(100),
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
+    processed_at TIMESTAMP
+);
+
+-- Indexes for analytics.whatsapp_lab_messages
+CREATE INDEX IF NOT EXISTS idx_whatsapp_lab_message_id ON analytics.whatsapp_lab_messages(message_id);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_lab_created_at ON analytics.whatsapp_lab_messages(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_lab_from_hash ON analytics.whatsapp_lab_messages(from_hash);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_lab_category ON analytics.whatsapp_lab_messages(category);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_lab_branch ON analytics.whatsapp_lab_messages(branch);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_lab_risk_level ON analytics.whatsapp_lab_messages(risk_level);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_lab_human_required ON analytics.whatsapp_lab_messages(human_required);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_lab_source ON analytics.whatsapp_lab_messages(source);
+
 
 -- ============================================================================
 -- VIEWS FOR ANALYTICS
@@ -284,6 +322,62 @@ CREATE TRIGGER notify_predictive_update
 CREATE TRIGGER notify_predictive_delete
     AFTER DELETE ON analytics.predictive_incidents
     FOR EACH ROW
+-- Function: Notify WhatsApp Lab message changes for real-time updates
+CREATE OR REPLACE FUNCTION notify_whatsapp_lab_change()
+RETURNS TRIGGER AS $$
+DECLARE
+    payload JSON;
+BEGIN
+    -- Build notification payload
+    IF TG_OP = 'DELETE' THEN
+        payload = json_build_object(
+            'operation', TG_OP,
+            'table', TG_TABLE_SCHEMA || '.' || TG_TABLE_NAME,
+            'message_id', OLD.message_id,
+            'created_at', OLD.created_at,
+            'timestamp', NOW()
+        );
+    ELSE
+        payload = json_build_object(
+            'operation', TG_OP,
+            'table', TG_TABLE_SCHEMA || '.' || TG_TABLE_NAME,
+            'message_id', NEW.message_id,
+            'category', NEW.category,
+            'branch', NEW.branch,
+            'risk_level', NEW.risk_level,
+            'human_required', NEW.human_required,
+            'created_at', NEW.created_at,
+            'timestamp', NOW()
+        );
+    END IF;
+    
+    -- Send notification
+    PERFORM pg_notify('whatsapp_lab_updates', payload::text);
+    
+    IF TG_OP = 'DELETE' THEN
+        RETURN OLD;
+    ELSE
+        RETURN NEW;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Triggers for WhatsApp Lab messages real-time notifications
+CREATE TRIGGER notify_whatsapp_lab_insert
+    AFTER INSERT ON analytics.whatsapp_lab_messages
+    FOR EACH ROW
+    EXECUTE FUNCTION notify_whatsapp_lab_change();
+
+CREATE TRIGGER notify_whatsapp_lab_update
+    AFTER UPDATE ON analytics.whatsapp_lab_messages
+    FOR EACH ROW
+    EXECUTE FUNCTION notify_whatsapp_lab_change();
+
+CREATE TRIGGER notify_whatsapp_lab_delete
+    AFTER DELETE ON analytics.whatsapp_lab_messages
+    FOR EACH ROW
+    EXECUTE FUNCTION notify_whatsapp_lab_change();
+
     EXECUTE FUNCTION notify_predictive_change();
 
 -- ============================================================================

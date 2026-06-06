@@ -97,4 +97,85 @@
     linear-gradient(to right, color-mix(in oklab, var(--border) 40%, transparent) 1px, transparent 1px),
     linear-gradient(to bottom, color-mix(in oklab, var(--border) 40%, transparent) 1px, transparent 1px);
   background-size: 40px 40px;
+
+/* Print styles for PDF export */
+@media print {
+  /* Hide navigation and interactive elements */
+  header,
+  nav,
+  .print\:hidden,
+  button:not(.print\:block),
+  input,
+  textarea,
+  select {
+    display: none !important;
+  }
+
+  /* Reset background for print */
+  body {
+    background: white !important;
+    background-image: none !important;
+    color: black !important;
+  }
+
+  /* Ensure content is visible */
+  * {
+    color: black !important;
+    background: white !important;
+  }
+
+  /* Keep borders and structure */
+  .border,
+  [class*="border-"] {
+    border-color: #ccc !important;
+  }
+
+  /* Preserve card structure */
+  .card,
+  [class*="card"] {
+    border: 1px solid #ccc !important;
+    page-break-inside: avoid;
+  }
+
+  /* Show print-only elements */
+  .print\:block {
+    display: block !important;
+  }
+
+  .hidden.print\:block {
+    display: block !important;
+  }
+
+  /* Optimize page breaks */
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+
+  /* Ensure tables don't break awkwardly */
+  table {
+    page-break-inside: avoid;
+  }
+
+  /* Remove shadows and effects */
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Adjust spacing for print */
+  .space-y-8 > * + * {
+    margin-top: 1rem !important;
+  }
+
+  .space-y-6 > * + * {
+    margin-top: 0.75rem !important;
+  }
+
+  /* Ensure badges are visible */
+  .badge,
+  [class*="badge"] {
+    border: 1px solid #666 !important;
+    padding: 2px 6px !important;
+  }
+}
 }

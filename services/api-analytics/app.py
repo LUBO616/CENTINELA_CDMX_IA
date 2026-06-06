@@ -1089,6 +1089,683 @@ async def get_alcaldias_geojson():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ============================================================================
+# WHATSAPP LAB ENDPOINTS
+# ============================================================================
+
+class WhatsAppLabMessageRequest(BaseModel):
+    """Request model for WhatsApp Lab message"""
+    from_number: Optional[str] = Field(None, description="Phone number (will be hashed, auto-generated if not provided)")
+    profile_name: Optional[str] = Field(None, description="User profile name")
+    message: str = Field(..., description="Message text")
+    location_hint: Optional[str] = Field(None, description="Location hint from user")
+    incident_time: Optional[str] = Field(None, description="Incident time (ISO format)")
+
+class WhatsAppLabMessageResponse(BaseModel):
+    """Response model for WhatsApp Lab message"""
+    message_id: str
+    message_text: Optional[str] = None
+    message_text_redacted: Optional[str] = None
+    profile_name: Optional[str] = None
+    category: Optional[str]
+    branch: Optional[str]
+    risk_level: Optional[int]
+    human_required: bool
+    p0_signals: List[str]
+    bot_reply: str
+    from_number_redacted: Optional[str] = None
+    location_hint: Optional[str] = None
+    location_source: Optional[str] = None
+    incident_time: Optional[str] = None
+    alcaldia_norm: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    created_at: str
+@app.post("/whatsapp-lab/messages", response_model=WhatsAppLabMessageResponse)
+async def create_whatsapp_lab_message(request: WhatsAppLabMessageRequest):
+    """
+    Process a WhatsApp-style message, classify it, and store in database.
+    Auto-enriches missing data: phone, location, time, alcaldía, coordinates.
+    """
+    try:
+        import hashlib
+        import re
+        import random
+        
+        # Auto-enrich: Generate or use provided phone number
+        from_number = request.from_number or "+525512345678"
+        from_hash = hashlib.sha256(from_number.encode()).hexdigest()[:16]
+        from_number_redacted = f"***{from_number[-4:]}"
+        
+        # Auto-enrich: Profile name
+        profile_name = request.profile_name or "Usuario Demo"
+        
+        # Auto-enrich: Incident time
+        if request.incident_time:
+            try:
+                incident_time = datetime.fromisoformat(request.incident_time.replace('Z', '+00:00'))
+            except:
+                incident_time = datetime.utcnow()
+        else:
+            incident_time = datetime.utcnow()
+        
+        # Generate message ID
+        message_id = f"msg_{uuid.uuid4().hex[:12]}"
+        
+        # Redact PII from message
+        message_text = request.message
+        message_redacted = message_text
+        
+        # Simple PII redaction patterns
+        message_redacted = re.sub(r'\b\d{10,}\b', '[PHONE]', message_redacted)
+        message_redacted = re.sub(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', '[EMAIL]', message_redacted)
+        message_redacted = re.sub(r'\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b', '[CARD]', message_redacted)
+        
+        # Auto-enrich: Detect location from text or generate synthetic
+        location_hint = None
+        location_source = "synthetic_911_geolocation"
+        alcaldia_norm = None
+        latitude = None
+        longitude = None
+        
+        # Alcaldías de CDMX para detección
+        alcaldias_cdmx = [
+            "alvaro obregon", "azcapotzalco", "benito juarez", "coyoacan",
+            "cuajimalpa", "cuauhtemoc", "gustavo a madero", "iztacalco",
+            "iztapalapa", "magdalena contreras", "miguel hidalgo", "milpa alta",
+            "tlahuac", "tlalpan", "venustiano carranza", "xochimilco"
+        ]
+        
+        message_lower = message_text.lower()
+        
+        # Normalizar acentos para detección
+        replacements = {
+            "á": "a", "é": "e", "í": "i", "ó": "o", "ú": "u", "ü": "u", "ñ": "n"
+        }
+        for a, b in replacements.items():
+            message_lower = message_lower.replace(a, b)
+        
+        # Detectar alcaldía en el texto
+        for alc in alcaldias_cdmx:
+            if alc in message_lower:
+                alcaldia_norm = alc.replace(" ", "_")
+                location_hint = alc.title()
+                location_source = "user_text"
+                break
+        
+        # Detectar colonias comunes (ejemplos)
+        colonias = {
+            "centro": ("cuauhtemoc", "Centro Histórico"),
+            "condesa": ("cuauhtemoc", "Condesa"),
+            "roma": ("cuauhtemoc", "Roma"),
+            "polanco": ("miguel_hidalgo", "Polanco"),
+            "santa fe": ("cuajimalpa", "Santa Fe"),
+            "coyoacan": ("coyoacan", "Coyoacán Centro"),
+        }
+        
+        for colonia_key, (alc, colonia_name) in colonias.items():
+            if colonia_key in message_lower:
+                alcaldia_norm = alc
+                location_hint = colonia_name
+                location_source = "user_text"
+                break
+        
+        # Si no se detectó ubicación, generar sintética
+        if not location_hint:
+            # Generar alcaldía aleatoria
+            alcaldia_norm = random.choice(alcaldias_cdmx).replace(" ", "_")
+            location_hint = f"Zona {alcaldia_norm.replace('_', ' ').title()}"
+            location_source = "synthetic_911_geolocation"
+        
+        # Generar coordenadas sintéticas para CDMX (aprox)
+        # CDMX: lat 19.2-19.6, lon -99.3 a -98.9
+        latitude = round(random.uniform(19.2, 19.6), 6)
+        longitude = round(random.uniform(-99.3, -98.9), 6)
+        
+        # Keyword-based categorization
+        message_lower = message_text.lower()
+
+        # Normalizar acentos para que "explosión", "semáforo", "agresión", etc. funcionen
+        replacements = {
+            "á": "a", "é": "e", "í": "i", "ó": "o", "ú": "u", "ü": "u", "ñ": "n"
+        }
+        for a, b in replacements.items():
+            message_lower = message_lower.replace(a, b)
+
+        category = "unknown"
+        branch = "low"
+        risk_level = 1
+        human_required = False
+        p0_signals = []
+
+        # PRIORITY 0) Self-harm / Crisis emocional crítica - MÁXIMA PRIORIDAD
+        if any(kw in message_lower for kw in [
+            "me quiero suicidar", "quiero suicidarme", "me voy a matar", "quiero matarme",
+            "ya no quiero vivir", "me quiero hacer dano", "voy a hacerme dano",
+            "autolesion", "quiero morir", "voy a morir", "me quiero ir",
+            "no aguanto mas", "no puedo mas", "quiero acabar con todo"
+        ]):
+            category = "victim_attention"  # Crisis emocional es atención a víctimas
+            branch = "critical"
+            risk_level = 9
+            human_required = True
+            p0_signals.append("self_harm_risk")
+
+        # 1) Protección Civil / señales P0
+        elif any(kw in message_lower for kw in [
+            "incendio", "fuego", "humo", "explosion", "explota", "gas", "derrumbe", "inundacion"
+        ]):
+            category = "protection_civil"
+            branch = "critical"
+            risk_level = 9
+            human_required = True
+
+            if any(kw in message_lower for kw in ["incendio", "fuego", "humo"]):
+                p0_signals.append("incendio")
+            if any(kw in message_lower for kw in ["explosion", "explota"]):
+                p0_signals.append("explosion")
+            if "gas" in message_lower:
+                p0_signals.append("gas")
+
+        # 2) Atención a víctimas ANTES que seguridad
+        elif any(kw in message_lower for kw in [
+            "violencia familiar", "violencia domestica", "violencia",
+            "golpes", "golpeando", "amenaza", "amenazando",
+            "gritos", "abuso", "maltrato", "agresion familiar", "victima"
+        ]):
+            category = "victim_attention"
+            branch = "mid"
+            risk_level = 5
+            human_required = True
+
+        # 3) Médico
+        elif any(kw in message_lower for kw in [
+            "herido", "herida", "inconsciente", "desmayado", "desmayada",
+            "ambulancia", "sangre", "sangrando", "sangrado", "no respira",
+            "medico", "medica", "infarto", "convulsiones", "dolor"
+        ]):
+            category = "medical"
+            human_required = True
+
+            # Caso médico crítico / P0
+            if any(kw in message_lower for kw in [
+                "inconsciente", "no respira", "desmayado", "desmayada",
+                "sangrando", "sangrado grave", "sangre", "herido grave", "herida grave"
+            ]):
+                branch = "critical"
+                risk_level = 8
+                p0_signals.append("medical_critical")
+            else:
+                branch = "mid"
+                risk_level = 4
+
+        # 4) Seguridad
+        elif any(kw in message_lower for kw in [
+            "robo", "robando", "asalto", "asaltando", "arma", "pistola",
+            "cuchillo", "disparo", "disparos", "balazo", "secuestro"
+        ]):
+            category = "security"
+            human_required = True
+
+            if any(kw in message_lower for kw in ["arma", "pistola", "disparo", "disparos", "balazo", "cuchillo"]):
+                branch = "critical"
+                risk_level = 7
+            else:
+                branch = "mid"
+                risk_level = 5
+
+        # 5) Servicios públicos
+        elif any(kw in message_lower for kw in [
+            "bache", "alumbrado", "poste", "fuga", "agua", "basura",
+            "coladera", "semaforo", "arbol caido"
+        ]):
+            category = "public_services"
+            branch = "low"
+            risk_level = 2
+            human_required = False
+
+        # 6) Apoyo social
+        elif any(kw in message_lower for kw in [
+            "persona vulnerable", "persona en calle", "indigente", "indigencia",
+            "extraviado", "perdido", "adulto mayor", "ayuda"
+        ]):
+            category = "social_support"
+            branch = "mid"
+            risk_level = 4
+            human_required = True
+
+        # Generate bot reply
+        category_names = {
+            'security': 'Seguridad',
+            'medical': 'Médico',
+            'protection_civil': 'Protección Civil',
+            'public_services': 'Servicios Públicos',
+            'social_support': 'Apoyo Social',
+            'victim_attention': 'Atención a Víctimas',
+            'unknown': 'General'
+        }
+        
+        branch_names = {
+            'critical': 'crítica',
+            'mid': 'media',
+            'low': 'baja'
+        }
+        
+        # Generate bot reply with special handling for self-harm
+        if "self_harm_risk" in p0_signals:
+            bot_reply = f"🆘 ATENCIÓN PRIORITARIA: Detectamos una situación de crisis emocional. Un operador humano especializado te contactará de inmediato. No estás solo/a. Folio: {message_id}"
+        else:
+            bot_reply = f"✅ Recibimos tu reporte. Se clasificó como {category_names.get(category, 'General')} con prioridad {branch_names.get(branch, 'baja')}."
+            
+            if human_required:
+                bot_reply += " Un operador humano debe revisar el caso."
+            
+            if p0_signals:
+                bot_reply += " ⚠️ Señales críticas detectadas. Prioridad máxima."
+            
+            bot_reply += f" Folio: {message_id}"
+        
+        # Store in database
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            INSERT INTO analytics.whatsapp_lab_messages
+            (message_id, from_hash, from_number_redacted, profile_name,
+             message_text, message_text_redacted,
+             location_hint, location_source, incident_time,
+             alcaldia_norm, latitude, longitude,
+             category, branch, risk_level, human_required, p0_signals, bot_reply,
+             source, synthetic, created_at, processed_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
+        """, (
+            message_id, from_hash, from_number_redacted, profile_name,
+            message_text, message_redacted,
+            location_hint, location_source, incident_time,
+            alcaldia_norm, latitude, longitude,
+            category, branch, risk_level, human_required, p0_signals, bot_reply,
+            'webchat', True
+        ))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        logger.info(f"WhatsApp Lab message created: {message_id}, category: {category}, branch: {branch}")
+        
+        return WhatsAppLabMessageResponse(
+            message_id=message_id,
+            message_text=message_text,
+            message_text_redacted=message_redacted,
+            profile_name=profile_name,
+            category=category,
+            branch=branch,
+            risk_level=risk_level,
+            human_required=human_required,
+            p0_signals=p0_signals,
+            bot_reply=bot_reply,
+
+            # Enriched demo fields
+            from_number_redacted=from_number_redacted,
+            location_hint=location_hint,
+            location_source=location_source,
+            incident_time=incident_time.isoformat() + "Z",
+            alcaldia_norm=alcaldia_norm,
+            latitude=latitude,
+            longitude=longitude,
+
+            created_at=datetime.utcnow().isoformat() + "Z"
+        )
+        
+    except Exception as e:
+        logger.error(f"Error creating WhatsApp Lab message: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/whatsapp-lab/messages/recent")
+async def get_recent_whatsapp_lab_messages(limit: int = Query(50, ge=1, le=200)):
+    """
+    Get recent WhatsApp Lab messages with enriched data
+    """
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cursor.execute("""
+            SELECT
+                message_id,
+                from_hash,
+                from_number_redacted,
+                profile_name,
+                message_text_redacted as message_text,
+                location_hint,
+                location_source,
+                incident_time,
+                alcaldia_norm,
+                latitude,
+                longitude,
+                category,
+                branch,
+                risk_level,
+                human_required,
+                p0_signals,
+                bot_reply,
+                source,
+                created_at
+            FROM analytics.whatsapp_lab_messages
+            ORDER BY created_at DESC
+            LIMIT %s
+        """, (limit,))
+        
+        messages = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        # Convert to list of dicts
+        result = []
+        for msg in messages:
+            result.append({
+                "message_id": msg['message_id'],
+                "from_hash": msg['from_hash'],
+                "from_number_redacted": msg['from_number_redacted'],
+                "profile_name": msg['profile_name'],
+                "message_text": msg['message_text'],
+                "location_hint": msg['location_hint'],
+                "location_source": msg['location_source'],
+                "incident_time": msg['incident_time'].isoformat() + "Z" if msg['incident_time'] else None,
+                "alcaldia_norm": msg['alcaldia_norm'],
+                "latitude": msg['latitude'],
+                "longitude": msg['longitude'],
+                "category": msg['category'],
+                "branch": msg['branch'],
+                "risk_level": msg['risk_level'],
+                "human_required": msg['human_required'],
+                "p0_signals": msg['p0_signals'] or [],
+                "bot_reply": msg['bot_reply'],
+                "source": msg['source'],
+                "created_at": msg['created_at'].isoformat() + "Z" if msg['created_at'] else None
+            })
+        
+        logger.info(f"Retrieved {len(result)} recent WhatsApp Lab messages")
+        return {"messages": result, "count": len(result)}
+        
+    except Exception as e:
+        logger.error(f"Error getting recent messages: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/whatsapp-lab/summary")
+async def get_whatsapp_lab_summary():
+    """
+    Get summary statistics for WhatsApp Lab
+    """
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Total messages
+        cursor.execute("SELECT COUNT(*) as count FROM analytics.whatsapp_lab_messages")
+        total_messages = cursor.fetchone()['count']
+        
+        # Last 24h
+        cursor.execute("""
+            SELECT COUNT(*) as count 
+            FROM analytics.whatsapp_lab_messages
+            WHERE created_at >= NOW() - INTERVAL '24 hours'
+        """)
+        last_24h = cursor.fetchone()['count']
+        
+        # By branch
+        cursor.execute("""
+            SELECT branch, COUNT(*) as count
+            FROM analytics.whatsapp_lab_messages
+            WHERE branch IS NOT NULL
+            GROUP BY branch
+        """)
+        by_branch = {row['branch']: row['count'] for row in cursor.fetchall()}
+        
+        # By category
+        cursor.execute("""
+            SELECT category, COUNT(*) as count
+            FROM analytics.whatsapp_lab_messages
+            WHERE category IS NOT NULL
+            GROUP BY category
+            ORDER BY count DESC
+            LIMIT 10
+        """)
+        by_category = {row['category']: row['count'] for row in cursor.fetchall()}
+        
+        # Human required
+        cursor.execute("""
+            SELECT COUNT(*) as count
+            FROM analytics.whatsapp_lab_messages
+            WHERE human_required = TRUE
+        """)
+        human_required_count = cursor.fetchone()['count']
+        
+        # P0 signals
+        cursor.execute("""
+            SELECT COUNT(*) as count
+            FROM analytics.whatsapp_lab_messages
+            WHERE p0_signals IS NOT NULL AND array_length(p0_signals, 1) > 0
+        """)
+        p0_count = cursor.fetchone()['count']
+        
+        cursor.close()
+        conn.close()
+        
+        return {
+            "total_messages": total_messages,
+            "last_24h": last_24h,
+            "by_branch": by_branch,
+            "by_category": by_category,
+            "human_required_count": human_required_count,
+            "p0_count": p0_count,
+            "generated_at": datetime.utcnow().isoformat() + "Z"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting WhatsApp Lab summary: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/whatsapp-lab/events")
+async def whatsapp_lab_events_sse():
+    """
+    Server-Sent Events endpoint for real-time WhatsApp Lab updates
+    """
+    from fastapi.responses import StreamingResponse
+    import select
+    
+    async def event_generator():
+        conn = get_db_connection()
+        conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
+        cursor = conn.cursor()
+        
+        try:
+            # Listen to the notification channel
+            cursor.execute("LISTEN whatsapp_lab_updates;")
+            logger.info("SSE client connected to whatsapp_lab_updates channel")
+            
+            # Send initial connection message
+            yield f"event: connected\ndata: {json.dumps({'status': 'connected', 'timestamp': datetime.utcnow().isoformat() + 'Z'})}\n\n"
+            
+            while True:
+                # Wait for notification with timeout
+                if select.select([conn], [], [], 15.0) == ([], [], []):
+                    # Timeout - send heartbeat
+                    yield f"event: heartbeat\ndata: {json.dumps({'timestamp': datetime.utcnow().isoformat() + 'Z'})}\n\n"
+                else:
+                    # Check for notifications
+                    conn.poll()
+                    while conn.notifies:
+                        notify = conn.notifies.pop(0)
+                        logger.info(f"SSE notification: {notify.payload}")
+                        yield f"event: whatsapp_lab_update\ndata: {notify.payload}\n\n"
+        
+        except Exception as e:
+            logger.error(f"SSE error: {e}")
+            yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
+        
+        finally:
+            cursor.close()
+            conn.close()
+            logger.info("SSE client disconnected from whatsapp_lab_updates")
+    
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
+
+@app.get("/activity/recent")
+async def get_recent_activity(limit: int = Query(10, ge=1, le=50)):
+    """
+    Get recent activity: both 911 calls and WhatsApp Lab messages
+    Consolidated endpoint for main dashboard
+    """
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Get recent 911 calls from analytics.incidents
+        cursor.execute("""
+            SELECT 
+                i.incident_id,
+                i.call_id,
+                i.risk_level,
+                i.branch,
+                i.case_category,
+                i.human_required,
+                i.has_p0_signals,
+                i.location_hint,
+                i.timestamp,
+                c.redacted_text as transcript,
+                t.p0_signals
+            FROM analytics.incidents i
+            LEFT JOIN raw.conversations c ON i.call_id = c.call_id
+            LEFT JOIN core.triage_results t ON i.call_id = t.call_id
+            ORDER BY i.timestamp DESC
+            LIMIT %s
+        """, (limit,))
+        
+        calls = []
+        for row in cursor.fetchall():
+            calls.append({
+                "type": "911_call",
+                "incident_id": str(row['incident_id']) if row['incident_id'] else None,
+                "call_id": str(row['call_id']) if row['call_id'] else None,
+                "transcript": row['transcript'],
+                "category": row['case_category'],
+                "branch": row['branch'],
+                "risk_level": row['risk_level'],
+                "human_required": row['human_required'],
+                "p0_signals": row['p0_signals'] or [],
+                "location_hint": row['location_hint'],
+                "timestamp": row['timestamp'].isoformat() + "Z" if row['timestamp'] else None
+            })
+        
+        # Get recent WhatsApp Lab messages
+        cursor.execute("""
+            SELECT 
+                message_id,
+                from_number_redacted,
+                profile_name,
+                message_text_redacted as message_text,
+                location_hint,
+                location_source,
+                incident_time,
+                alcaldia_norm,
+                category,
+                branch,
+                risk_level,
+                human_required,
+                p0_signals,
+                created_at
+            FROM analytics.whatsapp_lab_messages
+            ORDER BY created_at DESC
+            LIMIT %s
+        """, (limit,))
+        
+        messages = []
+        for row in cursor.fetchall():
+            messages.append({
+                "type": "whatsapp_message",
+                "message_id": row['message_id'],
+                "from_number_redacted": row['from_number_redacted'],
+                "profile_name": row['profile_name'],
+                "message_text": row['message_text'],
+                "location_hint": row['location_hint'],
+                "location_source": row['location_source'],
+                "incident_time": row['incident_time'].isoformat() + "Z" if row['incident_time'] else None,
+                "alcaldia_norm": row['alcaldia_norm'],
+                "category": row['category'],
+                "branch": row['branch'],
+                "risk_level": row['risk_level'],
+                "human_required": row['human_required'],
+                "p0_signals": row['p0_signals'] or [],
+                "timestamp": row['created_at'].isoformat() + "Z" if row['created_at'] else None
+            })
+        
+        # Get summary stats for last 24h
+        cursor.execute("""
+            SELECT 
+                COUNT(*) as total_calls,
+                COUNT(*) FILTER (WHERE branch = 'critical') as critical_calls,
+                COUNT(*) FILTER (WHERE human_required = TRUE) as human_required_calls,
+                COUNT(*) FILTER (WHERE has_p0_signals = TRUE) as p0_calls
+            FROM analytics.incidents
+            WHERE timestamp >= NOW() - INTERVAL '24 hours'
+        """)
+        calls_summary = cursor.fetchone()
+        
+        cursor.execute("""
+            SELECT 
+                COUNT(*) as total_messages,
+                COUNT(*) FILTER (WHERE branch = 'critical') as critical_messages,
+                COUNT(*) FILTER (WHERE human_required = TRUE) as human_required_messages,
+                COUNT(*) FILTER (WHERE p0_signals IS NOT NULL AND array_length(p0_signals, 1) > 0) as p0_messages
+            FROM analytics.whatsapp_lab_messages
+            WHERE created_at >= NOW() - INTERVAL '24 hours'
+        """)
+        messages_summary = cursor.fetchone()
+        
+        cursor.close()
+        conn.close()
+        
+        # Calculate totals
+        total_recent = (calls_summary['total_calls'] or 0) + (messages_summary['total_messages'] or 0)
+        critical_recent = (calls_summary['critical_calls'] or 0) + (messages_summary['critical_messages'] or 0)
+        human_required_recent = (calls_summary['human_required_calls'] or 0) + (messages_summary['human_required_messages'] or 0)
+        p0_recent = (calls_summary['p0_calls'] or 0) + (messages_summary['p0_messages'] or 0)
+        
+        logger.info(f"Retrieved recent activity: {len(calls)} calls, {len(messages)} messages")
+        
+        return {
+            "calls": calls,
+            "messages": messages,
+            "summary": {
+                "total_recent": total_recent,
+                "critical_recent": critical_recent,
+                "human_required_recent": human_required_recent,
+                "p0_recent": p0_recent,
+                "calls_24h": calls_summary['total_calls'] or 0,
+                "messages_24h": messages_summary['total_messages'] or 0
+            },
+            "generated_at": datetime.utcnow().isoformat() + "Z"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting recent activity: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("SERVICE_PORT", 8003))

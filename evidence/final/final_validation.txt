@@ -1,0 +1,495 @@
+===== CENTINELA CDMX IA - FINAL VALIDATION =====
+Sat Jun  6 03:33:28 PM CST 2026
+
+===== GIT BRANCH =====
+gate9-webchat-realtime-pdf
+
+===== GIT STATUS =====
+ M database/init.sql
+ M lovable-dashboard/src/components/app-shell.tsx
+ M lovable-dashboard/src/routeTree.gen.ts
+ M lovable-dashboard/src/routes/index.tsx
+ M lovable-dashboard/src/styles.css
+ M services/api-analytics/app.py
+ M services/api-gateway/app.py
+ M services/api-triage/app.py
+?? CLASSIFICATION_FIX_SUMMARY.md
+?? GATE9_10_11_DELIVERY.md
+?? SELF_HARM_PRIORITY_FIX.md
+?? docs/whatsapp_lab.md
+?? lovable-dashboard/ACTIVITY_SECTION_PATCH.md
+?? lovable-dashboard/src/routes/whatsapp-lab.tsx
+?? scripts/12_test_classification_fixes.sh
+?? scripts/12_test_whatsapp_lab.sh
+?? scripts/13_churn_demo_insert_update_delete.sh
+
+===== DOCKER SERVICES =====
+NAME               IMAGE                            COMMAND                  SERVICE         CREATED              STATUS                             PORTS
+api-analytics      911-ai-flow-demo-api-analytics   "uvicorn app:app --h…"   api-analytics   About a minute ago   Up About a minute (healthy)        127.0.0.1:8003->8003/tcp
+api-gateway        911-ai-flow-demo-api-gateway     "uvicorn app:app --h…"   api-gateway     About a minute ago   Up 59 seconds (health: starting)   127.0.0.1:8010->8010/tcp
+api-ingest         911-ai-flow-demo-api-ingest      "uvicorn app:app --h…"   api-ingest      15 hours ago         Up 4 hours (healthy)               127.0.0.1:8001->8001/tcp
+api-triage         911-ai-flow-demo-api-triage      "uvicorn app:app --h…"   api-triage      About a minute ago   Up About a minute (healthy)        127.0.0.1:8002->8002/tcp
+emergency-db       postgis/postgis:15-3.4-alpine    "docker-entrypoint.s…"   postgres        7 hours ago          Up 4 hours (healthy)               127.0.0.1:5432->5432/tcp
+n8n-orchestrator   n8nio/n8n:latest                 "tini -- /docker-ent…"   n8n             16 hours ago         Up 4 hours (healthy)               127.0.0.1:5678->5678/tcp
+
+===== API HEALTH =====
+{
+  "status": "healthy",
+  "service": "api-gateway",
+  "version": "1.0.0",
+  "timestamp": "2026-06-06T21:33:28.747861Z"
+}
+
+===== ACTIVITY RECENT =====
+{
+  "calls": [
+    {
+      "type": "911_call",
+      "incident_id": "5bf019c2-d902-47fd-b1db-a945766e7036",
+      "call_id": "07851eca-5e06-40b2-8175-e1e9a734fb0a",
+      "transcript": "=Hay un bache enorme en Reforma",
+      "category": "public_services",
+      "branch": "low",
+      "risk_level": 1,
+      "human_required": false,
+      "p0_signals": [],
+      "location_hint": "Zona Reforma",
+      "timestamp": "2026-06-06T21:32:47.043901Z"
+    },
+    {
+      "type": "911_call",
+      "incident_id": "0ad419d1-9058-4d05-8279-86f441f52c0c",
+      "call_id": "68a8ddb9-040e-4816-a1e2-5491f6334a72",
+      "transcript": "=Reporto incendio en [DIRECCIÓN-REDACTADA], Cuauhtémoc, sale mucho humo",
+      "category": "protection_civil",
+      "branch": "critical",
+      "risk_level": 7,
+      "human_required": true,
+      "p0_signals": [
+        "incendio"
+      ],
+      "location_hint": "Centro",
+      "timestamp": "2026-06-06T21:32:46.965470Z"
+    },
+    {
+      "type": "911_call",
+      "incident_id": "8d3af9b0-5286-4b5f-ad04-86bac11ed9f0",
+      "call_id": "88d5dc23-0c8e-4040-9a91-37a001fe94bb",
+      "transcript": "=Hay basura acumulada obstruyendo el paso peatonal",
+      "category": "public_services",
+      "branch": "low",
+      "risk_level": 1,
+      "human_required": false,
+      "p0_signals": [],
+      "location_hint": "Zona simulada",
+      "timestamp": "2026-06-06T20:14:50.304203Z"
+    },
+    {
+      "type": "911_call",
+      "incident_id": "686e9320-b0d0-459e-bce4-7b06b4202f7f",
+      "call_id": "b852b3aa-dd0f-4e4c-863a-577279650c0c",
+      "transcript": "=Un árbol cayó sobre un coche y bloquea la avenida",
+      "category": "unknown",
+      "branch": "low",
+      "risk_level": 1,
+      "human_required": false,
+      "p0_signals": [],
+      "location_hint": "Xochimilco",
+      "timestamp": "2026-06-06T20:14:49.976654Z"
+    },
+    {
+      "type": "911_call",
+      "incident_id": "3bc710c5-8f34-4b36-a193-b29c3ec0ccb8",
+      "call_id": "c713e70c-5430-4f38-af33-0ca93f6a1512",
+      "transcript": "=Persona herida con sangrado abundante requiere ambulancia",
+      "category": "medical",
+      "branch": "critical",
+      "risk_level": 7,
+      "human_required": true,
+      "p0_signals": [
+        "sangrado grave"
+      ],
+      "location_hint": "Gustavo A. Madero",
+      "timestamp": "2026-06-06T20:14:49.643655Z"
+    },
+    {
+      "type": "911_call",
+      "incident_id": "4bc92ba2-608c-4613-8f41-af681d48a75d",
+      "call_id": "7ee36428-1897-4412-b08e-cfe124669777",
+      "transcript": "=Hay un semáforo apagado y casi chocan varios autos",
+      "category": "unknown",
+      "branch": "low",
+      "risk_level": 1,
+      "human_required": false,
+      "p0_signals": [],
+      "location_hint": "Venustiano Carranza",
+      "timestamp": "2026-06-06T20:14:49.299563Z"
+    },
+    {
+      "type": "911_call",
+      "incident_id": "29da37e7-52a7-45ac-b296-ea0de40690d5",
+      "call_id": "06f6a236-139f-47d3-ab2e-fa864c3864f1",
+      "transcript": "=Hay fuga de gas en un edificio y los vecinos están saliendo",
+      "category": "protection_civil",
+      "branch": "critical",
+      "risk_level": 7,
+      "human_required": true,
+      "p0_signals": [
+        "fuga de gas"
+      ],
+      "location_hint": "Tlalpan",
+      "timestamp": "2026-06-06T20:14:48.959598Z"
+    },
+    {
+      "type": "911_call",
+      "incident_id": "7196dfc5-488a-46dd-8402-844e641a13ea",
+      "call_id": "e6c3f778-0b8c-4843-96eb-05d914c273f1",
+      "transcript": "=Hay violencia familiar, gritos y golpes en el departamento vecino",
+      "category": "victim_attention",
+      "branch": "critical",
+      "risk_level": 7,
+      "human_required": true,
+      "p0_signals": [
+        "violencia familiar",
+        "gritos de auxilio",
+        "violencia física"
+      ],
+      "location_hint": "Azcapotzalco",
+      "timestamp": "2026-06-06T20:14:48.620175Z"
+    },
+    {
+      "type": "911_call",
+      "incident_id": "280c4afb-6d12-49a9-b448-c7167577f374",
+      "call_id": "fea80bbf-ec5f-4b1e-829b-5b004a9d1a71",
+      "transcript": "=Quiero reportar un bache enorme, varios coches se dañaron",
+      "category": "public_services",
+      "branch": "low",
+      "risk_level": 1,
+      "human_required": false,
+      "p0_signals": [],
+      "location_hint": "Miguel Hidalgo",
+      "timestamp": "2026-06-06T20:14:48.283517Z"
+    },
+    {
+      "type": "911_call",
+      "incident_id": "505465b0-b745-4881-9a55-7628ecdd4caf",
+      "call_id": "99810cf7-a87c-44e6-b068-ac6051cf3aff",
+      "transcript": "=Me están robando con pistola, están amenazando a la gente",
+      "category": "security",
+      "branch": "critical",
+      "risk_level": 7,
+      "human_required": true,
+      "p0_signals": [
+        "arma de fuego"
+      ],
+      "location_hint": "Iztapalapa",
+      "timestamp": "2026-06-06T20:14:47.941903Z"
+    }
+  ],
+  "messages": [
+    {
+      "type": "whatsapp_message",
+      "message_id": "msg_252fe2498d35",
+      "from_number_redacted": "***5678",
+      "profile_name": "Usuario Demo",
+      "message_text": "Hay un incendio en mi edificio en Benito Juárez",
+      "location_hint": "Benito Juarez",
+      "location_source": "user_text",
+      "incident_time": "2026-06-06T21:32:47.079674Z",
+      "alcaldia_norm": "benito_juarez",
+      "category": "protection_civil",
+      "branch": "critical",
+      "risk_level": 9,
+      "human_required": true,
+      "p0_signals": [
+        "incendio"
+      ],
+      "timestamp": "2026-06-06T21:32:47.084164Z"
+    },
+    {
+      "type": "whatsapp_message",
+      "message_id": "msg_c5f4dd7ae45b",
+      "from_number_redacted": "***5678",
+      "profile_name": "Usuario Demo",
+      "message_text": "Escucho violencia familiar en Iztapalapa",
+      "location_hint": "Iztapalapa",
+      "location_source": "user_text",
+      "incident_time": "2026-06-06T21:32:46.872073Z",
+      "alcaldia_norm": "iztapalapa",
+      "category": "victim_attention",
+      "branch": "mid",
+      "risk_level": 5,
+      "human_required": true,
+      "p0_signals": [],
+      "timestamp": "2026-06-06T21:32:46.876345Z"
+    },
+    {
+      "type": "whatsapp_message",
+      "message_id": "msg_24be6cb03cf7",
+      "from_number_redacted": "***5678",
+      "profile_name": "Usuario Demo",
+      "message_text": "Hay una persona herida inconsciente en Coyoacán",
+      "location_hint": "Coyoacán Centro",
+      "location_source": "user_text",
+      "incident_time": "2026-06-06T21:32:46.833995Z",
+      "alcaldia_norm": "coyoacan",
+      "category": "medical",
+      "branch": "critical",
+      "risk_level": 8,
+      "human_required": true,
+      "p0_signals": [
+        "medical_critical"
+      ],
+      "timestamp": "2026-06-06T21:32:46.838370Z"
+    },
+    {
+      "type": "whatsapp_message",
+      "message_id": "msg_47a6a74c9d46",
+      "from_number_redacted": "***5678",
+      "profile_name": "Usuario Demo",
+      "message_text": "Me quiero suicidar",
+      "location_hint": "Zona Gustavo A Madero",
+      "location_source": "synthetic_911_geolocation",
+      "incident_time": "2026-06-06T21:32:46.795189Z",
+      "alcaldia_norm": "gustavo_a_madero",
+      "category": "victim_attention",
+      "branch": "critical",
+      "risk_level": 9,
+      "human_required": true,
+      "p0_signals": [
+        "self_harm_risk"
+      ],
+      "timestamp": "2026-06-06T21:32:46.799673Z"
+    },
+    {
+      "type": "whatsapp_message",
+      "message_id": "msg_e065eddfa61e",
+      "from_number_redacted": "***5678",
+      "profile_name": "Usuario Demo",
+      "message_text": "Escucho gritos y golpes en el departamento de al lado, creo que hay violencia familiar",
+      "location_hint": "Zona Iztacalco",
+      "location_source": "synthetic_911_geolocation",
+      "incident_time": "2026-06-06T21:32:46.724916Z",
+      "alcaldia_norm": "iztacalco",
+      "category": "victim_attention",
+      "branch": "mid",
+      "risk_level": 5,
+      "human_required": true,
+      "p0_signals": [],
+      "timestamp": "2026-06-06T21:32:46.729267Z"
+    },
+    {
+      "type": "whatsapp_message",
+      "message_id": "msg_1c56b0500334",
+      "from_number_redacted": "***5678",
+      "profile_name": "Usuario Demo",
+      "message_text": "Me están asaltando con un arma en Polanco",
+      "location_hint": "Polanco",
+      "location_source": "user_text",
+      "incident_time": "2026-06-06T21:32:46.690739Z",
+      "alcaldia_norm": "miguel_hidalgo",
+      "category": "security",
+      "branch": "critical",
+      "risk_level": 7,
+      "human_required": true,
+      "p0_signals": [],
+      "timestamp": "2026-06-06T21:32:46.695004Z"
+    },
+    {
+      "type": "whatsapp_message",
+      "message_id": "msg_56a111cf8b5e",
+      "from_number_redacted": "***5678",
+      "profile_name": "Usuario Demo",
+      "message_text": "Hay una persona herida inconsciente en Coyoacán",
+      "location_hint": "Coyoacán Centro",
+      "location_source": "user_text",
+      "incident_time": "2026-06-06T21:32:46.652099Z",
+      "alcaldia_norm": "coyoacan",
+      "category": "medical",
+      "branch": "critical",
+      "risk_level": 8,
+      "human_required": true,
+      "p0_signals": [
+        "medical_critical"
+      ],
+      "timestamp": "2026-06-06T21:32:46.656323Z"
+    },
+    {
+      "type": "whatsapp_message",
+      "message_id": "msg_96dca1fcbee0",
+      "from_number_redacted": "***5678",
+      "profile_name": "Usuario Demo",
+      "message_text": "Hay un bache muy grande en la calle Reforma",
+      "location_hint": "Zona Azcapotzalco",
+      "location_source": "synthetic_911_geolocation",
+      "incident_time": "2026-06-06T21:32:46.616677Z",
+      "alcaldia_norm": "azcapotzalco",
+      "category": "public_services",
+      "branch": "low",
+      "risk_level": 2,
+      "human_required": false,
+      "p0_signals": [],
+      "timestamp": "2026-06-06T21:32:46.620967Z"
+    },
+    {
+      "type": "whatsapp_message",
+      "message_id": "msg_97020525bc42",
+      "from_number_redacted": "***5678",
+      "profile_name": "Usuario Demo",
+      "message_text": "Hay un incendio en mi edificio en la colonia Centro",
+      "location_hint": "Centro Histórico",
+      "location_source": "user_text",
+      "incident_time": "2026-06-06T21:32:46.573993Z",
+      "alcaldia_norm": "cuauhtemoc",
+      "category": "protection_civil",
+      "branch": "critical",
+      "risk_level": 9,
+      "human_required": true,
+      "p0_signals": [
+        "incendio"
+      ],
+      "timestamp": "2026-06-06T21:32:46.578530Z"
+    },
+    {
+      "type": "whatsapp_message",
+      "message_id": "msg_f1dc1c1af7a2",
+      "from_number_redacted": "***5678",
+      "profile_name": "Usuario Demo",
+      "message_text": "Hay una crisis emocional urgente en Cuajimalpa",
+      "location_hint": "Cuajimalpa",
+      "location_source": "user_text",
+      "incident_time": "2026-06-06T20:14:47.022085Z",
+      "alcaldia_norm": "cuajimalpa",
+      "category": "unknown",
+      "branch": "low",
+      "risk_level": 1,
+      "human_required": false,
+      "p0_signals": [],
+      "timestamp": "2026-06-06T20:14:47.027156Z"
+    }
+  ],
+  "summary": {
+    "total_recent": 354,
+    "critical_recent": 162,
+    "human_required_recent": 240,
+    "p0_recent": 149,
+    "calls_24h": 138,
+    "messages_24h": 216
+  },
+  "generated_at": "2026-06-06T21:33:28.776813Z"
+}
+
+===== WHATSAPP SELF-HARM TEST =====
+{
+  "message_id": "msg_87f4ff240826",
+  "message_text": "Me quiero suicidar",
+  "message_text_redacted": "Me quiero suicidar",
+  "profile_name": "Usuario Demo",
+  "category": "victim_attention",
+  "branch": "critical",
+  "risk_level": 9,
+  "human_required": true,
+  "p0_signals": [
+    "self_harm_risk"
+  ],
+  "bot_reply": "🆘 ATENCIÓN PRIORITARIA: Detectamos una situación de crisis emocional. Un operador humano especializado te contactará de inmediato. No estás solo/a. Folio: msg_87f4ff240826",
+  "from_number_redacted": "***5678",
+  "location_hint": "Zona Alvaro Obregon",
+  "location_source": "synthetic_911_geolocation",
+  "incident_time": "2026-06-06T21:33:28.794479Z",
+  "alcaldia_norm": "alvaro_obregon",
+  "latitude": 19.554391,
+  "longitude": -99.111456,
+  "created_at": "2026-06-06T21:33:28.806481Z"
+}
+
+===== WHATSAPP MEDICAL CRITICAL TEST =====
+{
+  "message_id": "msg_261466eb7fa8",
+  "message_text": "Hay una persona herida inconsciente en Coyoacán",
+  "message_text_redacted": "Hay una persona herida inconsciente en Coyoacán",
+  "profile_name": "Usuario Demo",
+  "category": "medical",
+  "branch": "critical",
+  "risk_level": 8,
+  "human_required": true,
+  "p0_signals": [
+    "medical_critical"
+  ],
+  "bot_reply": "✅ Recibimos tu reporte. Se clasificó como Médico con prioridad crítica. Un operador humano debe revisar el caso. ⚠️ Señales críticas detectadas. Prioridad máxima. Folio: msg_261466eb7fa8",
+  "from_number_redacted": "***5678",
+  "location_hint": "Coyoacán Centro",
+  "location_source": "user_text",
+  "incident_time": "2026-06-06T21:33:28.823416Z",
+  "alcaldia_norm": "coyoacan",
+  "latitude": 19.296477,
+  "longitude": -98.966973,
+  "created_at": "2026-06-06T21:33:28.838423Z"
+}
+
+===== WHATSAPP PUBLIC SERVICES TEST =====
+{
+  "message_id": "msg_f68141fabd5b",
+  "message_text": "Hay un bache enorme en Reforma",
+  "message_text_redacted": "Hay un bache enorme en Reforma",
+  "profile_name": "Usuario Demo",
+  "category": "public_services",
+  "branch": "low",
+  "risk_level": 2,
+  "human_required": false,
+  "p0_signals": [],
+  "bot_reply": "✅ Recibimos tu reporte. Se clasificó como Servicios Públicos con prioridad baja. Folio: msg_f68141fabd5b",
+  "from_number_redacted": "***5678",
+  "location_hint": "Zona Benito Juarez",
+  "location_source": "synthetic_911_geolocation",
+  "incident_time": "2026-06-06T21:33:28.855647Z",
+  "alcaldia_norm": "benito_juarez",
+  "latitude": 19.39155,
+  "longitude": -99.012748,
+  "created_at": "2026-06-06T21:33:28.869730Z"
+}
+
+===== FRONTEND BUILD =====
+
+> build
+> vite build
+
+[@lovable.dev/vite-tanstack-config] No Lovable context detected — skipping nitro deploy plugin. Pass `nitro: true` (or `nitro: { ... }`) to force-enable.
+[@lovable.dev/vite-tanstack-config] No Lovable context detected — skipping nitro deploy plugin. Pass `nitro: true` (or `nitro: { ... }`) to force-enable.
+[@lovable.dev/vite-tanstack-config] No Lovable context detected — skipping nitro deploy plugin. Pass `nitro: true` (or `nitro: { ... }`) to force-enable.
+vite v7.3.5 building client environment for production...
+transforming...
+✓ 2540 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/client/assets/styles-BgbHflSQ.css          91.76 kB │ gzip:  15.75 kB
+dist/client/assets/triangle-alert-DjKy6yXU.js    0.27 kB │ gzip:   0.22 kB
+dist/client/assets/send-BG-DFD4Z.js              0.29 kB │ gzip:   0.23 kB
+dist/client/assets/clock-CmZzyx78.js             0.35 kB │ gzip:   0.27 kB
+dist/client/assets/shield-check-rpGhXr6C.js      0.47 kB │ gzip:   0.32 kB
+dist/client/assets/printer-DthDX-Hy.js           0.81 kB │ gzip:   0.46 kB
+dist/client/assets/centinela-api-ChDJyi2L.js     3.11 kB │ gzip:   1.07 kB
+dist/client/assets/simular-DrAsKRiU.js          12.61 kB │ gzip:   4.40 kB
+dist/client/assets/whatsapp-lab-CyF9pTyU.js     14.28 kB │ gzip:   4.44 kB
+dist/client/assets/index-KTGI_qPe.js            23.42 kB │ gzip:   6.43 kB
+dist/client/assets/badge-CNQw5O0G.js            37.99 kB │ gzip:  12.50 kB
+dist/client/assets/index-NzjR3DvQ.js           356.25 kB │ gzip: 113.59 kB
+dist/client/assets/predictivo-b3yu1J4n.js      419.76 kB │ gzip: 113.73 kB
+✓ built in 3.21s
+vite v7.3.5 building ssr environment for production...
+transforming...
+✓ 72 modules transformed.
+rendering chunks...
+dist/server/assets/empty-plugin-adapters-BFgPZ6_d.js        0.13 kB
+dist/server/assets/badge-Dykm26qB.js                        1.08 kB
+dist/server/assets/_tanstack-start-manifest_v-D3wujrWa.js   1.67 kB
+dist/server/assets/start-BU3QrbHk.js                        1.71 kB
+dist/server/server.js                                       3.34 kB
+dist/server/assets/centinela-api-BRmtT3wb.js                4.71 kB
+dist/server/assets/router-OLfwwkzP.js                      10.98 kB
+dist/server/assets/simular-BZFfFGnY.js                     13.74 kB
+dist/server/assets/predictivo-C6rVs3b7.js                  18.28 kB
+dist/server/assets/whatsapp-lab-C-GdPQO4.js                20.49 kB
+dist/server/assets/index-fvkKHXom.js                       28.70 kB
+dist/server/assets/server-DsiTrbfK.js                      58.36 kB
+✓ built in 504ms

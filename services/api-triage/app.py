@@ -47,34 +47,38 @@ DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://emergency_user:changeme@p
 # P0 Signals - CRITICAL: These MUST trigger human attention
 P0_SIGNALS = {
     # Weapons
-    "arma": "arma", "pistola": "arma de fuego", "cuchillo": "arma blanca", 
-    "navaja": "arma blanca", "rifle": "arma de fuego",
+    "arma": "arma", "pistola": "arma de fuego", "cuchillo": "arma blanca",
+    "navaja": "arma blanca", "rifle": "arma de fuego", "disparo": "arma de fuego",
+    "disparos": "arma de fuego", "balazo": "arma de fuego",
     
     # Fire/Explosion
     "fuego": "incendio", "incendio": "incendio", "humo": "incendio",
-    "explosión": "explosión", "bomba": "explosivo",
+    "explosion": "explosión", "explosión": "explosión", "bomba": "explosivo",
     
     # Hazmat
-    "gas": "fuga de gas", "químico": "químico peligroso", "tóxico": "sustancia tóxica",
+    "gas": "fuga de gas", "quimico": "químico peligroso", "químico": "químico peligroso",
+    "toxico": "sustancia tóxica", "tóxico": "sustancia tóxica",
     
-    # Life-threatening medical
+    # Life-threatening medical - CRITICAL
     "suicida": "intento suicida", "suicidio": "intento suicida", "matarme": "intento suicida",
-    "inconsciente": "persona inconsciente", "desmayado": "persona inconsciente",
-    "no respira": "dificultad respiratoria", "dificultad respirar": "dificultad respiratoria",
-    "ahogo": "dificultad respiratoria", "sangrado": "sangrado grave", 
+    "inconsciente": "medical_critical", "desmayado": "medical_critical", "desmayada": "medical_critical",
+    "no respira": "medical_critical", "dificultad respirar": "medical_critical",
+    "ahogo": "medical_critical", "sangrado": "sangrado grave", "sangrando": "sangrado grave",
     "sangre": "sangrado grave", "hemorragia": "sangrado grave",
+    "herido grave": "medical_critical", "herida grave": "medical_critical",
     
     # Kidnapping/Violence
-    "secuestro": "privación de libertad", "privación libertad": "privación de libertad",
-    "retenido": "privación de libertad", "desaparición": "persona desaparecida",
-    "desaparecido": "persona desaparecida", "violación": "violencia sexual",
-    "abuso sexual": "violencia sexual",
+    "secuestro": "privación de libertad", "privacion libertad": "privación de libertad",
+    "privación libertad": "privación de libertad",
+    "retenido": "privación de libertad", "desaparicion": "persona desaparecida",
+    "desaparecido": "persona desaparecida", "violacion": "violencia sexual",
+    "violación": "violencia sexual", "abuso sexual": "violencia sexual",
     
     # Domestic/Gender violence
     "golpes": "violencia física", "violencia familiar": "violencia familiar",
     "mujer golpeada": "violencia contra mujer", "violencia mujer": "violencia contra mujer",
-    "niño golpeado": "maltrato infantil", "maltrato infantil": "maltrato infantil",
-    "adulto mayor maltrato": "maltrato adulto mayor",
+    "niño golpeado": "maltrato infantil", "niña golpeada": "maltrato infantil",
+    "maltrato infantil": "maltrato infantil", "adulto mayor maltrato": "maltrato adulto mayor",
     
     # Vulnerable populations
     "discapacidad riesgo": "persona con discapacidad en riesgo",
@@ -85,31 +89,41 @@ P0_SIGNALS = {
 }
 
 
-# Category keywords
+# Category keywords - PRIORITY ORDER MATTERS
+# victim_attention must be checked BEFORE security
 CATEGORY_KEYWORDS = {
-    "security": [
-        "robo", "asalto", "delincuente", "ladrón", "violencia", "arma",
-        "amenaza", "agresión", "pandilla", "balacera"
+    "victim_attention": [
+        "violencia familiar", "violencia domestica", "violencia doméstica",
+        "golpes", "golpeando", "maltrato", "abuso", "agresion familiar",
+        "agresión familiar", "victima", "víctima", "violación", "secuestro",
+        "trata", "extorsión", "fraude", "amenaza familiar", "gritos casa"
     ],
     "medical": [
-        "dolor", "herida", "sangre", "ambulancia", "enfermo", "accidente",
-        "caída", "fractura", "desmayo", "convulsión", "parto", "embarazo"
+        "herido", "herida", "inconsciente", "desmayado", "desmayada",
+        "ambulancia", "sangre", "sangrando", "sangrado", "no respira",
+        "medico", "médico", "medica", "médica", "infarto", "convulsiones",
+        "dolor", "enfermo", "accidente", "caída", "fractura", "desmayo",
+        "convulsión", "parto", "embarazo"
     ],
     "protection_civil": [
-        "incendio", "inundación", "derrumbe", "gas", "árbol caído",
-        "explosión", "fuga", "terremoto", "deslizamiento"
+        "incendio", "fuego", "humo", "inundación", "derrumbe", "gas",
+        "árbol caído", "explosion", "explosión", "fuga", "terremoto",
+        "deslizamiento", "derrumbe"
+    ],
+    "security": [
+        "robo", "robando", "asalto", "asaltando", "delincuente", "ladrón",
+        "arma", "pistola", "cuchillo", "disparo", "disparos", "balazo",
+        "pandilla", "balacera", "amenaza"
     ],
     "public_services": [
         "alumbrado", "bache", "agua", "basura", "alcantarilla",
-        "semáforo", "tráfico", "estacionamiento"
+        "semáforo", "tráfico", "estacionamiento", "poste", "fuga agua",
+        "coladera", "arbol caido"
     ],
     "social_support": [
         "adicción", "depresión", "orientación", "apoyo psicológico",
-        "persona en situación de calle", "abandono"
-    ],
-    "victim_attention": [
-        "violación", "secuestro", "trata", "abuso", "extorsión",
-        "fraude", "víctima"
+        "persona en situación de calle", "abandono", "persona vulnerable",
+        "indigente", "indigencia", "extraviado", "perdido", "adulto mayor ayuda"
     ]
 }
 
@@ -140,8 +154,16 @@ class TriageEngine:
     
     @staticmethod
     def detect_p0_signals(text: str) -> List[str]:
-        """Detect P0 critical signals"""
+        """Detect P0 critical signals with accent normalization"""
         text_lower = text.lower()
+        
+        # Normalize accents for better detection
+        replacements = {
+            "á": "a", "é": "e", "í": "i", "ó": "o", "ú": "u", "ü": "u", "ñ": "n"
+        }
+        for a, b in replacements.items():
+            text_lower = text_lower.replace(a, b)
+        
         detected = []
         
         for keyword, signal in P0_SIGNALS.items():
@@ -170,32 +192,63 @@ class TriageEngine:
     
     @staticmethod
     def classify_category(text: str) -> str:
-        """Classify incident category based on keywords"""
+        """
+        Classify incident category based on keywords
+        PRIORITY ORDER: victim_attention > medical > protection_civil > security > others
+        """
         text_lower = text.lower()
-        scores = {}
         
-        for category, keywords in CATEGORY_KEYWORDS.items():
-            score = sum(1 for keyword in keywords if keyword in text_lower)
-            if score > 0:
-                scores[category] = score
+        # Normalize accents for better detection
+        replacements = {
+            "á": "a", "é": "e", "í": "i", "ó": "o", "ú": "u", "ü": "u", "ñ": "n"
+        }
+        for a, b in replacements.items():
+            text_lower = text_lower.replace(a, b)
         
-        if not scores:
-            return "unknown"
+        # Check categories in priority order
+        priority_order = [
+            "victim_attention",
+            "medical",
+            "protection_civil",
+            "security",
+            "public_services",
+            "social_support"
+        ]
         
-        return max(scores, key=scores.get)
+        for category in priority_order:
+            keywords = CATEGORY_KEYWORDS.get(category, [])
+            if any(keyword in text_lower for keyword in keywords):
+                return category
+        
+        return "unknown"
     
     @staticmethod
     def calculate_risk_level(text: str, p0_signals: List[str], nna_involved: bool) -> int:
         """
         Calculate risk level 1-10
         CRITICAL RULE: P0 signals ALWAYS result in risk >= 6
+        MEDICAL CRITICAL RULE: medical_critical P0 signal = risk >= 8
         MEDIUM RISK RULE: Traffic accidents without P0 signals = level 5
         """
         text_lower = text.lower()
+        
+        # Normalize accents
+        replacements = {
+            "á": "a", "é": "e", "í": "i", "ó": "o", "ú": "u", "ü": "u", "ñ": "n"
+        }
+        for a, b in replacements.items():
+            text_lower = text_lower.replace(a, b)
+        
         base_score = 1.0
         
-        # P0 signals: MINIMUM risk level 6
-        if p0_signals:
+        # Check for medical_critical P0 signal (inconsciente, no respira, etc.)
+        has_medical_critical = any("medical_critical" in sig for sig in p0_signals)
+        
+        # Medical critical: MINIMUM risk level 8
+        if has_medical_critical:
+            base_score = max(8.0, base_score)
+        # Other P0 signals: MINIMUM risk level 6
+        elif p0_signals:
             base_score = max(6.0, base_score)
             base_score += len(p0_signals) * 0.5
         
@@ -205,8 +258,8 @@ class TriageEngine:
         
         # Medium risk traffic accidents (without P0 signals)
         traffic_keywords = [
-            "accidente", "choque", "colisión", "volcadura", "tránsito",
-            "carros chocados", "vehículo detenido", "bloqueo vial", "semáforo caído"
+            "accidente", "choque", "colision", "volcadura", "transito",
+            "carros chocados", "vehiculo detenido", "bloqueo vial", "semaforo caido"
         ]
         has_traffic_incident = any(kw in text_lower for kw in traffic_keywords)
         
@@ -229,8 +282,11 @@ class TriageEngine:
         # Cap at 10
         risk_level = min(10, int(base_score))
         
-        # CRITICAL: Never below 6 if P0 signals present
-        if p0_signals and risk_level < 6:
+        # CRITICAL: Never below 8 if medical_critical P0 signal
+        if has_medical_critical and risk_level < 8:
+            risk_level = 8
+        # CRITICAL: Never below 6 if other P0 signals present
+        elif p0_signals and risk_level < 6:
             risk_level = 6
         
         return risk_level

@@ -460,6 +460,129 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
+# ============================================================================
+# WHATSAPP LAB PROXY ENDPOINTS
+# ============================================================================
+
+class WhatsAppLabMessageRequest(BaseModel):
+    """Request model for WhatsApp Lab message"""
+    from_number: Optional[str] = Field(None, description="Phone number (optional, auto-generated if missing)")
+    profile_name: Optional[str] = Field(None, description="User profile name")
+    message: str = Field(..., description="Message text")
+    location_hint: Optional[str] = Field(None, description="Optional location hint")
+    incident_time: Optional[str] = Field(None, description="Optional incident timestamp")
+
+@app.post("/whatsapp-lab/messages")
+async def proxy_whatsapp_lab_message(request: WhatsAppLabMessageRequest):
+    """
+    Proxy POST request to create WhatsApp Lab message
+    """
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                f"{ANALYTICS_BASE_URL}/whatsapp-lab/messages",
+                json=request.dict()
+            )
+            response.raise_for_status()
+            return response.json()
+    except httpx.HTTPError as e:
+        logger.error(f"Error proxying WhatsApp Lab message: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/whatsapp-lab/messages/recent")
+async def proxy_whatsapp_lab_recent(limit: int = 50):
+    """
+    Proxy GET request for recent WhatsApp Lab messages
+    """
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(
+                f"{ANALYTICS_BASE_URL}/whatsapp-lab/messages/recent",
+                params={"limit": limit}
+            )
+            response.raise_for_status()
+            return response.json()
+    except httpx.HTTPError as e:
+        logger.error(f"Error proxying recent messages: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/whatsapp-lab/summary")
+async def proxy_whatsapp_lab_summary():
+    """
+    Proxy GET request for WhatsApp Lab summary
+    """
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(f"{ANALYTICS_BASE_URL}/whatsapp-lab/summary")
+            response.raise_for_status()
+            return response.json()
+    except httpx.HTTPError as e:
+        logger.error(f"Error proxying WhatsApp Lab summary: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/whatsapp-lab/events")
+async def proxy_whatsapp_lab_events():
+    """
+    Proxy SSE endpoint for WhatsApp Lab real-time updates
+    """
+    try:
+        async with httpx.AsyncClient(timeout=None) as client:
+            async with client.stream("GET", f"{ANALYTICS_BASE_URL}/whatsapp-lab/events") as response:
+                response.raise_for_status()
+                async for chunk in response.aiter_bytes():
+                    yield chunk
+    except httpx.HTTPError as e:
+        logger.error(f"Error proxying WhatsApp Lab events: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Activity Recent Endpoint (Consolidated)
+@app.get("/activity/recent")
+async def proxy_activity_recent(limit: int = 10):
+    """
+    Proxy para obtener actividad reciente consolidada (llamadas 911 + mensajes WhatsApp Lab)
+    """
+    try:
+        logger.info(f"Fetching recent activity (limit={limit})")
+        
+        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+            response = await client.get(
+                f"{ANALYTICS_BASE_URL}/activity/recent",
+                params={"limit": limit}
+            )
+            
+            if response.status_code != 200:
+                logger.error(f"api-analytics returned status {response.status_code}")
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=f"Analytics API error: {response.text}"
+                )
+            
+            result = response.json()
+            logger.info(f"Recent activity fetched: {len(result.get('calls', []))} calls, {len(result.get('messages', []))} messages")
+            return result
+            
+    except httpx.TimeoutException:
+        logger.error("Timeout calling api-analytics")
+        raise HTTPException(
+            status_code=504,
+            detail="Gateway timeout: api-analytics did not respond in time"
+        )
+    except httpx.RequestError as e:
+        logger.error(f"Network error calling api-analytics: {str(e)}")
+        raise HTTPException(
+            status_code=502,
+            detail=f"Gateway error: Could not reach api-analytics ({str(e)})"
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error in /activity/recent: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal gateway error: {str(e)}"
+        )
+
+
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8010)

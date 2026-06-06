@@ -9,10 +9,16 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WhatsappLabRouteImport } from './routes/whatsapp-lab'
 import { Route as SimularRouteImport } from './routes/simular'
 import { Route as PredictivoRouteImport } from './routes/predictivo'
 import { Route as IndexRouteImport } from './routes/index'
 
+const WhatsappLabRoute = WhatsappLabRouteImport.update({
+  id: '/whatsapp-lab',
+  path: '/whatsapp-lab',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SimularRoute = SimularRouteImport.update({
   id: '/simular',
   path: '/simular',
@@ -33,34 +39,45 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/predictivo': typeof PredictivoRoute
   '/simular': typeof SimularRoute
+  '/whatsapp-lab': typeof WhatsappLabRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/predictivo': typeof PredictivoRoute
   '/simular': typeof SimularRoute
+  '/whatsapp-lab': typeof WhatsappLabRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/predictivo': typeof PredictivoRoute
   '/simular': typeof SimularRoute
+  '/whatsapp-lab': typeof WhatsappLabRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/predictivo' | '/simular'
+  fullPaths: '/' | '/predictivo' | '/simular' | '/whatsapp-lab'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/predictivo' | '/simular'
-  id: '__root__' | '/' | '/predictivo' | '/simular'
+  to: '/' | '/predictivo' | '/simular' | '/whatsapp-lab'
+  id: '__root__' | '/' | '/predictivo' | '/simular' | '/whatsapp-lab'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   PredictivoRoute: typeof PredictivoRoute
   SimularRoute: typeof SimularRoute
+  WhatsappLabRoute: typeof WhatsappLabRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/whatsapp-lab': {
+      id: '/whatsapp-lab'
+      path: '/whatsapp-lab'
+      fullPath: '/whatsapp-lab'
+      preLoaderRoute: typeof WhatsappLabRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/simular': {
       id: '/simular'
       path: '/simular'
@@ -89,6 +106,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   PredictivoRoute: PredictivoRoute,
   SimularRoute: SimularRoute,
+  WhatsappLabRoute: WhatsappLabRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
