@@ -176,3 +176,11 @@ lovable-dashboard/node_modules/
 # Local source backups
 *.bak
 *.bak2
+
+# Python local env/cache
+.venv/
+__pycache__/
+*.pyc
+*.bak_percentile_fix
+*.bak_join_fix
+*.bak_spatial_join_full_fix

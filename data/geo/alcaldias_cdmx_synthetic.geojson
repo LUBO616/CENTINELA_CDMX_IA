@@ -1,0 +1,594 @@
+{
+  "type": "FeatureCollection",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "EPSG:4326"
+    }
+  },
+  "metadata": {
+    "version": "1.0.0",
+    "generated_by": "generate_synthetic_geo.py",
+    "purpose": "Demo educativa - Hackathon",
+    "synthetic_data": true,
+    "disclaimer": "Todos los polígonos son sintéticos y NO representan límites oficiales de alcaldías."
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "alcaldia": "Álvaro Obregón",
+        "alcaldia_norm": "alvaro_obregon",
+        "synthetic": true,
+        "disclaimer": "Polígono sintético para demo. NO representa límites oficiales."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -99.2292,
+              19.3217
+            ],
+            [
+              -99.1792,
+              19.3217
+            ],
+            [
+              -99.1792,
+              19.371699999999997
+            ],
+            [
+              -99.2292,
+              19.371699999999997
+            ],
+            [
+              -99.2292,
+              19.3217
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "alcaldia": "Azcapotzalco",
+        "alcaldia_norm": "azcapotzalco",
+        "synthetic": true,
+        "disclaimer": "Polígono sintético para demo. NO representa límites oficiales."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -99.2111,
+              19.465
+            ],
+            [
+              -99.16109999999999,
+              19.465
+            ],
+            [
+              -99.16109999999999,
+              19.514999999999997
+            ],
+            [
+              -99.2111,
+              19.514999999999997
+            ],
+            [
+              -99.2111,
+              19.465
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "alcaldia": "Benito Juárez",
+        "alcaldia_norm": "benito_juarez",
+        "synthetic": true,
+        "disclaimer": "Polígono sintético para demo. NO representa límites oficiales."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -99.1842,
+              19.3733
+            ],
+            [
+              -99.13419999999999,
+              19.3733
+            ],
+            [
+              -99.13419999999999,
+              19.423299999999998
+            ],
+            [
+              -99.1842,
+              19.423299999999998
+            ],
+            [
+              -99.1842,
+              19.3733
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "alcaldia": "Coyoacán",
+        "alcaldia_norm": "coyoacan",
+        "synthetic": true,
+        "disclaimer": "Polígono sintético para demo. NO representa límites oficiales."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -99.1867,
+              19.3217
+            ],
+            [
+              -99.13669999999999,
+              19.3217
+            ],
+            [
+              -99.13669999999999,
+              19.371699999999997
+            ],
+            [
+              -99.1867,
+              19.371699999999997
+            ],
+            [
+              -99.1867,
+              19.3217
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "alcaldia": "Cuajimalpa de Morelos",
+        "alcaldia_norm": "cuajimalpa",
+        "synthetic": true,
+        "disclaimer": "Polígono sintético para demo. NO representa límites oficiales."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -99.31670000000001,
+              19.330000000000002
+            ],
+            [
+              -99.2667,
+              19.330000000000002
+            ],
+            [
+              -99.2667,
+              19.38
+            ],
+            [
+              -99.31670000000001,
+              19.38
+            ],
+            [
+              -99.31670000000001,
+              19.330000000000002
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "alcaldia": "Cuauhtémoc",
+        "alcaldia_norm": "cuauhtemoc",
+        "synthetic": true,
+        "disclaimer": "Polígono sintético para demo. NO representa límites oficiales."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -99.15820000000001,
+              19.407600000000002
+            ],
+            [
+              -99.1082,
+              19.407600000000002
+            ],
+            [
+              -99.1082,
+              19.4576
+            ],
+            [
+              -99.15820000000001,
+              19.4576
+            ],
+            [
+              -99.15820000000001,
+              19.407600000000002
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "alcaldia": "Gustavo A. Madero",
+        "alcaldia_norm": "gustavo_a_madero",
+        "synthetic": true,
+        "disclaimer": "Polígono sintético para demo. NO representa límites oficiales."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -99.1389,
+              19.460800000000003
+            ],
+            [
+              -99.0889,
+              19.460800000000003
+            ],
+            [
+              -99.0889,
+              19.5108
+            ],
+            [
+              -99.1389,
+              19.5108
+            ],
+            [
+              -99.1389,
+              19.460800000000003
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "alcaldia": "Iztacalco",
+        "alcaldia_norm": "iztacalco",
+        "synthetic": true,
+        "disclaimer": "Polígono sintético para demo. NO representa límites oficiales."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -99.11500000000001,
+              19.365000000000002
+            ],
+            [
+              -99.065,
+              19.365000000000002
+            ],
+            [
+              -99.065,
+              19.415
+            ],
+            [
+              -99.11500000000001,
+              19.415
+            ],
+            [
+              -99.11500000000001,
+              19.365000000000002
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "alcaldia": "Iztapalapa",
+        "alcaldia_norm": "iztapalapa",
+        "synthetic": true,
+        "disclaimer": "Polígono sintético para demo. NO representa límites oficiales."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -99.08000000000001,
+              19.330000000000002
+            ],
+            [
+              -99.03,
+              19.330000000000002
+            ],
+            [
+              -99.03,
+              19.38
+            ],
+            [
+              -99.08000000000001,
+              19.38
+            ],
+            [
+              -99.08000000000001,
+              19.330000000000002
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "alcaldia": "La Magdalena Contreras",
+        "alcaldia_norm": "magdalena_contreras",
+        "synthetic": true,
+        "disclaimer": "Polígono sintético para demo. NO representa límites oficiales."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -99.2667,
+              19.253300000000003
+            ],
+            [
+              -99.21669999999999,
+              19.253300000000003
+            ],
+            [
+              -99.21669999999999,
+              19.3033
+            ],
+            [
+              -99.2667,
+              19.3033
+            ],
+            [
+              -99.2667,
+              19.253300000000003
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "alcaldia": "Miguel Hidalgo",
+        "alcaldia_norm": "miguel_hidalgo",
+        "synthetic": true,
+        "disclaimer": "Polígono sintético para demo. NO representa límites oficiales."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -99.22500000000001,
+              19.407600000000002
+            ],
+            [
+              -99.175,
+              19.407600000000002
+            ],
+            [
+              -99.175,
+              19.4576
+            ],
+            [
+              -99.22500000000001,
+              19.4576
+            ],
+            [
+              -99.22500000000001,
+              19.407600000000002
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "alcaldia": "Milpa Alta",
+        "alcaldia_norm": "milpa_alta",
+        "synthetic": true,
+        "disclaimer": "Polígono sintético para demo. NO representa límites oficiales."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -99.04830000000001,
+              19.166700000000002
+            ],
+            [
+              -98.9983,
+              19.166700000000002
+            ],
+            [
+              -98.9983,
+              19.2167
+            ],
+            [
+              -99.04830000000001,
+              19.2167
+            ],
+            [
+              -99.04830000000001,
+              19.166700000000002
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "alcaldia": "Tláhuac",
+        "alcaldia_norm": "tlahuac",
+        "synthetic": true,
+        "disclaimer": "Polígono sintético para demo. NO representa límites oficiales."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -99.0383,
+              19.2208
+            ],
+            [
+              -98.9883,
+              19.2208
+            ],
+            [
+              -98.9883,
+              19.270799999999998
+            ],
+            [
+              -99.0383,
+              19.270799999999998
+            ],
+            [
+              -99.0383,
+              19.2208
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "alcaldia": "Tlalpan",
+        "alcaldia_norm": "tlalpan",
+        "synthetic": true,
+        "disclaimer": "Polígono sintético para demo. NO representa límites oficiales."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -99.19170000000001,
+              19.265
+            ],
+            [
+              -99.1417,
+              19.265
+            ],
+            [
+              -99.1417,
+              19.314999999999998
+            ],
+            [
+              -99.19170000000001,
+              19.314999999999998
+            ],
+            [
+              -99.19170000000001,
+              19.265
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "alcaldia": "Venustiano Carranza",
+        "alcaldia_norm": "venustiano_carranza",
+        "synthetic": true,
+        "disclaimer": "Polígono sintético para demo. NO representa límites oficiales."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -99.125,
+              19.415000000000003
+            ],
+            [
+              -99.07499999999999,
+              19.415000000000003
+            ],
+            [
+              -99.07499999999999,
+              19.465
+            ],
+            [
+              -99.125,
+              19.465
+            ],
+            [
+              -99.125,
+              19.415000000000003
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "alcaldia": "Xochimilco",
+        "alcaldia_norm": "xochimilco",
+        "synthetic": true,
+        "disclaimer": "Polígono sintético para demo. NO representa límites oficiales."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -99.12830000000001,
+              19.2333
+            ],
+            [
+              -99.0783,
+              19.2333
+            ],
+            [
+              -99.0783,
+              19.283299999999997
+            ],
+            [
+              -99.12830000000001,
+              19.283299999999997
+            ],
+            [
+              -99.12830000000001,
+              19.2333
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}
