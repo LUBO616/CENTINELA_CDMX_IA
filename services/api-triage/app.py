@@ -1,10 +1,12 @@
 """
 911 AI Flow Demo - API Triage Service
 Deterministic AI classification using keyword matrix and P0 signal detection
+Enhanced with pysentimiento for emotion and sentiment analysis
 CRITICAL: Never downgrade or close calls with P0 signals
 """
 
 import os
+import sys
 import uuid
 from datetime import datetime
 from typing import Optional, Dict, Any, List
@@ -15,6 +17,10 @@ from pydantic import BaseModel, Field
 import psycopg2
 from psycopg2.extras import RealDictCursor, Json
 import logging
+
+# Add scripts directory to path for sentiment analyzer
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'scripts'))
+from sentiment_analyzer import analyze_text
 
 # Configure logging
 logging.basicConfig(
@@ -185,11 +191,12 @@ class TriageEngine:
         return max(scores, key=scores.get)
     
     @staticmethod
-    def calculate_risk_level(text: str, p0_signals: List[str], nna_involved: bool) -> int:
+    def calculate_risk_level(text: str, p0_signals: List[str], nna_involved: bool, sentiment_data: Optional[Dict] = None) -> int:
         """
         Calculate risk level 1-10
         CRITICAL RULE: P0 signals ALWAYS result in risk >= 6
         MEDIUM RISK RULE: Traffic accidents without P0 signals = level 5
+        Enhanced with sentiment analysis from pysentimiento
         """
         text_lower = text.lower()
         base_score = 1.0
@@ -202,6 +209,23 @@ class TriageEngine:
         # NNA involvement: ALWAYS elevate
         if nna_involved:
             base_score += 2.0
+        
+        # Sentiment analysis enhancement
+        if sentiment_data:
+            emotion = sentiment_data.get('emotion', 'neutral')
+            sentiment = sentiment_data.get('sentiment', 'NEU')
+            
+            # Fear emotion increases risk
+            if emotion == 'fear':
+                base_score += 1.5
+            elif emotion in ['anger', 'sadness']:
+                base_score += 1.0
+            
+            # Negative sentiment increases risk
+            if sentiment == 'NEG':
+                base_score += 1.0
+            elif sentiment == 'POS':
+                base_score -= 0.5  # Slightly reduce for positive (but never below P0 minimum)
         
         # Medium risk traffic accidents (without P0 signals)
         traffic_keywords = [
@@ -340,6 +364,7 @@ class TriageResponse(BaseModel):
     trust_flags: TrustFlags
     p0_signals: List[str]
     keywords_detected: Dict[str, List[str]]
+    sentiment_analysis: Optional[Dict[str, Any]] = None
 
 
 class HealthResponse(BaseModel):
@@ -367,11 +392,20 @@ async def health_check():
 async def triage_call(request: TriageRequest):
     """
     Perform deterministic triage classification
+    Enhanced with pysentimiento emotion and sentiment analysis
     CRITICAL: Never downgrade calls with P0 signals
     """
     try:
         # Preserve trace_id from ingest or generate new one
         trace_id = request.trace_id if request.trace_id else str(uuid.uuid4())
+        
+        # Perform sentiment analysis with pysentimiento
+        sentiment_data = None
+        try:
+            sentiment_data = analyze_text(request.transcript)
+            logger.info(f"Sentiment analysis: emotion={sentiment_data.get('emotion')}, sentiment={sentiment_data.get('sentiment')}")
+        except Exception as e:
+            logger.warning(f"Sentiment analysis failed: {e}. Continuing with keyword-based triage.")
         
         # Detect P0 signals
         p0_signals = TriageEngine.detect_p0_signals(request.transcript)
@@ -381,11 +415,12 @@ async def triage_call(request: TriageRequest):
         elderly_involved = TriageEngine.detect_elderly(request.transcript)
         gender_violence = TriageEngine.detect_gender_violence(request.transcript)
         
-        # Calculate risk level
+        # Calculate risk level (now with sentiment data)
         risk_level = TriageEngine.calculate_risk_level(
-            request.transcript, 
-            p0_signals, 
-            nna_involved
+            request.transcript,
+            p0_signals,
+            nna_involved,
+            sentiment_data
         )
         
         # Determine branch and priority
@@ -422,10 +457,14 @@ async def triage_call(request: TriageRequest):
         else:
             public_phrase = "Registro realizado, se dará seguimiento"
         
-        # Rationale
+        # Rationale (enhanced with sentiment)
         rationale_parts = []
         if p0_signals:
             rationale_parts.append(f"Señales P0 detectadas: {', '.join(p0_signals[:2])}")
+        if sentiment_data:
+            emotion = sentiment_data.get('emotion', 'neutral')
+            if emotion in ['fear', 'anger', 'sadness']:
+                rationale_parts.append(f"Emoción detectada: {emotion}")
         if nna_involved:
             rationale_parts.append("Menor de edad involucrado")
         if risk_level >= 8:
@@ -482,7 +521,7 @@ async def triage_call(request: TriageRequest):
         cursor.close()
         conn.close()
         
-        logger.info(f"Triage completed: call_id={request.call_id}, risk={risk_level}, p0={len(p0_signals)}")
+        logger.info(f"Triage completed: call_id={request.call_id}, risk={risk_level}, p0={len(p0_signals)}, emotion={sentiment_data.get('emotion') if sentiment_data else 'N/A'}")
         
         return TriageResponse(
             call_id=request.call_id,
@@ -501,7 +540,8 @@ async def triage_call(request: TriageRequest):
             rationale_public=rationale_public,
             trust_flags=TrustFlags(confidence_score=0.85, ambiguity_detected=False),
             p0_signals=p0_signals,
-            keywords_detected=keywords_detected
+            keywords_detected=keywords_detected,
+            sentiment_analysis=sentiment_data
         )
         
     except psycopg2.IntegrityError as e:
