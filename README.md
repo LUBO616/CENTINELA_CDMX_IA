@@ -1,6 +1,6 @@
 # 911 AI Flow Demo
 
-**Demo educativa de flujo 911 asistido por IA simulada para Ciudad de México**
+**Demo de flujo 911 asistido por Agents y sub agents IA  para Ciudad de México**
 
 [![License](https://img.shields.io/badge/license-Educational-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/)
@@ -30,7 +30,7 @@
 
 ## ¿Qué es este proyecto?
 
-**911 AI Flow Demo** es una **demostración educativa** de un sistema de clasificación automática de llamadas de emergencia 911 para Ciudad de México, utilizando IA simulada (determinista, basada en reglas) para:
+**911 AI Flow Demo** es una **demostración ** de un sistema de clasificación automática de llamadas de emergencia 911 para Ciudad de México, utilizando Agent IA (determinista, basada en reglas) para:
 
 1. **Redactar PII** (Información Personal Identificable) de transcripciones
 2. **Clasificar riesgo** del 1 al 10 según señales críticas (P0)
@@ -38,13 +38,12 @@
 4. **Priorizar atención humana** cuando sea necesario
 5. **Generar métricas** y predicciones para análisis
 
-### ⚠️ Importante
+### Importante
 
-- **Datos 100% sintéticos**: No se usan datos reales de emergencias
-- **IA simulada**: No usa modelos de ML, solo reglas deterministas
-- **Propósito educativo**: Demo para evaluación técnica, no para producción
-- **No sustituye operadores**: El humano siempre está en el loop
-
+- **Datos der fuentes abiertas reales **
+- **Agent IA **
+- **Propósito**: Demo para evaluación técnica, no para producción
+- **No sustituye operadores** Human-in-the-loop 
 ---
 
 ## Problema que Resuelve
