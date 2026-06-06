@@ -1,0 +1,67 @@
+===== GATE 6D VALIDATION =====
+Sat Jun  6 09:45:42 AM CST 2026
+===== POSTGIS JUDGE METRICS =====
+"generated"
+16
+{
+  "gini_risk_norm": {
+    "value": 0.1556,
+    "threshold": 0.35,
+    "pass": true,
+    "description": "Gini coefficient for territorial equity (lower is better)"
+  },
+  "recall_p0_detection_rate": {
+    "value": 1.0,
+    "threshold": 0.95,
+    "pass": true,
+    "description": "P0 signal detection rate in critical incidents (synthetic metric)"
+  },
+  "operator_hours_freed_per_day": {
+    "value": 10.8,
+    "threshold": 2.0,
+    "pass": true,
+    "description": "Operator hours freed per day through automation"
+  },
+  "coverage_bias_correlation_after": {
+    "value": 0.1932,
+    "threshold": 0.2,
+    "pass": true,
+    "description": "Correlation between digital access and incident count (lower is better)"
+  }
+}
+===== GEOJSON CHECK =====
+"FeatureCollection"
+16
+===== FRONTEND BUILD =====
+
+> build
+> vite build
+
+[@lovable.dev/vite-tanstack-config] No Lovable context detected — skipping nitro deploy plugin. Pass `nitro: true` (or `nitro: { ... }`) to force-enable.
+[@lovable.dev/vite-tanstack-config] No Lovable context detected — skipping nitro deploy plugin. Pass `nitro: true` (or `nitro: { ... }`) to force-enable.
+[@lovable.dev/vite-tanstack-config] No Lovable context detected — skipping nitro deploy plugin. Pass `nitro: true` (or `nitro: { ... }`) to force-enable.
+vite v7.3.5 building client environment for production...
+transforming...
+✓ 1908 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/client/assets/styles-CzAx3y1U.css         81.54 kB │ gzip:  13.62 kB
+dist/client/assets/centinela-api-DHJzxZVE.js    2.06 kB │ gzip:   1.07 kB
+dist/client/assets/simular-D9YYB8DU.js         12.72 kB │ gzip:   4.47 kB
+dist/client/assets/index-g7NP4ptq.js           22.86 kB │ gzip:   7.18 kB
+dist/client/assets/index-C_zvZQSj.js          354.58 kB │ gzip: 112.92 kB
+✓ built in 1.87s
+vite v7.3.5 building ssr environment for production...
+transforming...
+✓ 62 modules transformed.
+rendering chunks...
+dist/server/assets/empty-plugin-adapters-BFgPZ6_d.js        0.13 kB
+dist/server/assets/_tanstack-start-manifest_v-DpPF2yGM.js   0.75 kB
+dist/server/assets/start-Brnhro9A.js                        1.71 kB
+dist/server/assets/centinela-api-UccXWuMo.js                2.08 kB
+dist/server/server.js                                       3.34 kB
+dist/server/assets/router-kSk-EowA.js                      10.12 kB
+dist/server/assets/simular-nnT9QkwI.js                     13.74 kB
+dist/server/assets/index-96TUvaSd.js                       17.03 kB
+dist/server/assets/server-B9CaZppT.js                      58.36 kB
+✓ built in 319ms

@@ -174,37 +174,45 @@ function Dashboard() {
 
           <div className="rounded-xl border border-border bg-card p-5">
             <div className="mb-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-              Zonas de riesgo (normalizadas)
+              Zonas de riesgo PostGIS
             </div>
+            <p className="mb-3 text-[10px] text-muted-foreground">
+              Top alcaldías por riesgo promedio sintético
+            </p>
             <ul className="space-y-2.5">
-              {p
-                ? p.risk_zones.map((z, idx) => (
-                    <li key={idx} className="flex items-center gap-3">
-                      <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
-                      <div className="flex-1">
-                        <div className="flex justify-between text-xs">
-                          <span>{z.zone}</span>
-                          <span className="font-mono text-muted-foreground">
-                            {Number(((z as any).risk_score ?? (z as any).score ?? 0)).toFixed(2)}
-                          </span>
+              {j?.by_alcaldia && j.by_alcaldia.length > 0
+                ? [...j.by_alcaldia]
+                    .sort((a, b) => b.avg_risk - a.avg_risk)
+                    .slice(0, 5)
+                    .map((item) => (
+                      <li key={item.alcaldia_norm} className="flex items-center gap-3">
+                        <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        <div className="flex-1">
+                          <div className="flex justify-between text-xs">
+                            <span>{item.alcaldia}</span>
+                            <span className="font-mono text-muted-foreground">
+                              {item.avg_risk.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
+                            <div
+                              className={[
+                                "h-full rounded-full",
+                                item.avg_risk >= 7
+                                  ? "bg-risk-critical"
+                                  : item.avg_risk >= 4
+                                    ? "bg-risk-mid"
+                                    : "bg-risk-low",
+                              ].join(" ")}
+                              style={{ width: `${Math.min(100, item.avg_risk * 10)}%` }}
+                            />
+                          </div>
                         </div>
-                        <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
-                          <div
-                            className={[
-                              "h-full rounded-full",
-                              Number(((z as any).risk_score ?? (z as any).score ?? 0)) >= 7
-                                ? "bg-risk-critical"
-                                : Number(((z as any).risk_score ?? (z as any).score ?? 0)) >= 4
-                                  ? "bg-risk-mid"
-                                  : "bg-risk-low",
-                            ].join(" ")}
-                            style={{ width: `${Math.min(100, Number(((z as any).risk_score ?? (z as any).score ?? 0)) * 10)}%` }}
-                          />
-                        </div>
-                      </div>
-                    </li>
-                  ))
-                : <Skeleton rows={5} />}
+                      </li>
+                    ))
+                : <div className="py-4 text-center text-xs text-muted-foreground">
+                    Cargando zonas PostGIS…
+                  </div>}
             </ul>
           </div>
         </div>
