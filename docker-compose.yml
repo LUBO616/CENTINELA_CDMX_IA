@@ -1,0 +1,278 @@
+version: '3.8'
+
+# ============================================================================
+# 911 AI Flow Demo - Docker Compose Configuration
+# ============================================================================
+# This configuration sets up the complete emergency demo system:
+# - PostgreSQL database with initialization
+# - n8n workflow orchestrator
+# - Three FastAPI microservices (ingest, triage, analytics)
+#
+# Usage:
+#   docker compose up -d                    # Start infra only (postgres + n8n)
+#   docker compose --profile services up -d # Start all services
+# ============================================================================
+
+services:
+  # --------------------------------------------------------------------------
+  # PostgreSQL Database
+  # --------------------------------------------------------------------------
+  postgres:
+    image: postgres:15-alpine
+    container_name: emergency-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-emergency_demo}
+      POSTGRES_USER: ${POSTGRES_USER:-emergency_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=es_MX.UTF-8"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-emergency_user} -d ${POSTGRES_DB:-emergency_demo}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - emergency-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # --------------------------------------------------------------------------
+  # API Ingest Service (Port 8001)
+  # --------------------------------------------------------------------------
+  api-ingest:
+    profiles: ["services"]
+    build:
+      context: ./services/api-ingest
+      dockerfile: Dockerfile
+    container_name: api-ingest
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-emergency_user}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-emergency_demo}
+      SERVICE_PORT: ${API_INGEST_PORT:-8001}
+      SERVICE_HOST: ${API_INGEST_HOST:-0.0.0.0}
+      LOG_LEVEL: ${API_INGEST_LOG_LEVEL:-INFO}
+      DEMO_MODE: ${DEMO_MODE:-true}
+      ENABLE_PII_REDACTION: ${ENABLE_PII_REDACTION:-true}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:5678}
+    ports:
+      - "127.0.0.1:${API_INGEST_PORT:-8001}:8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - emergency-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # --------------------------------------------------------------------------
+  # API Triage Service (Port 8002)
+  # --------------------------------------------------------------------------
+  api-triage:
+    profiles: ["services"]
+    build:
+      context: ./services/api-triage
+      dockerfile: Dockerfile
+    container_name: api-triage
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-emergency_user}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-emergency_demo}
+      SERVICE_PORT: ${API_TRIAGE_PORT:-8002}
+      SERVICE_HOST: ${API_TRIAGE_HOST:-0.0.0.0}
+      LOG_LEVEL: ${API_TRIAGE_LOG_LEVEL:-INFO}
+      DEMO_MODE: ${DEMO_MODE:-true}
+      ENABLE_P0_DETECTION: ${ENABLE_P0_DETECTION:-true}
+      ENABLE_NNA_PROTECTION: ${ENABLE_NNA_PROTECTION:-true}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:5678}
+    ports:
+      - "127.0.0.1:${API_TRIAGE_PORT:-8002}:8002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - emergency-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # --------------------------------------------------------------------------
+  # API Analytics Service (Port 8003)
+  # --------------------------------------------------------------------------
+  api-analytics:
+    profiles: ["services"]
+    build:
+      context: ./services/api-analytics
+      dockerfile: Dockerfile
+    container_name: api-analytics
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-emergency_user}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-emergency_demo}
+      SERVICE_PORT: ${API_ANALYTICS_PORT:-8003}
+      SERVICE_HOST: ${API_ANALYTICS_HOST:-0.0.0.0}
+      LOG_LEVEL: ${API_ANALYTICS_LOG_LEVEL:-INFO}
+      DEMO_MODE: ${DEMO_MODE:-true}
+      ENABLE_MOCK_PREDICTIONS: ${ENABLE_MOCK_PREDICTIONS:-true}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:5678}
+    ports:
+      - "127.0.0.1:${API_ANALYTICS_PORT:-8003}:8003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - emergency-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # --------------------------------------------------------------------------
+  # API Gateway Service (Port 8010)
+  # --------------------------------------------------------------------------
+  api-gateway:
+    profiles: ["services"]
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    restart: unless-stopped
+    environment:
+      SERVICE_PORT: ${API_GATEWAY_PORT:-8010}
+      SERVICE_HOST: ${API_GATEWAY_HOST:-0.0.0.0}
+      LOG_LEVEL: ${API_GATEWAY_LOG_LEVEL:-INFO}
+      N8N_WEBHOOK_URL: http://n8n:5678/webhook/911-call
+      N8N_AUTH_USER: ${N8N_BASIC_AUTH_USER:-admin}
+      N8N_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD:-changeme}
+      ANALYTICS_BASE_URL: http://api-analytics:8003
+      TIMEOUT: ${API_GATEWAY_TIMEOUT:-15.0}
+    ports:
+      - "127.0.0.1:${API_GATEWAY_PORT:-8010}:8010"
+    depends_on:
+      n8n:
+        condition: service_healthy
+      api-analytics:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8010/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - emergency-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # --------------------------------------------------------------------------
+  # n8n Workflow Orchestrator (Port 5678)
+  # --------------------------------------------------------------------------
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n-orchestrator
+    restart: unless-stopped
+    environment:
+      # Authentication
+      N8N_BASIC_AUTH_ACTIVE: ${N8N_BASIC_AUTH_ACTIVE:-true}
+      N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER:-admin}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD:-changeme}
+      
+      # Network configuration
+      N8N_HOST: ${N8N_HOST:-localhost}
+      N8N_PORT: ${N8N_PORT:-5678}
+      N8N_PROTOCOL: ${N8N_PROTOCOL:-http}
+      WEBHOOK_URL: ${WEBHOOK_URL:-http://localhost:5678}
+      
+      # Encryption
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-changeme}
+      
+      # Timezone
+      GENERIC_TIMEZONE: ${TZ:-America/Mexico_City}
+      TZ: ${TZ:-America/Mexico_City}
+      
+      # Execution settings
+      EXECUTIONS_DATA_SAVE_ON_ERROR: all
+      EXECUTIONS_DATA_SAVE_ON_SUCCESS: all
+      EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS: true
+      
+      # Performance
+      N8N_PAYLOAD_SIZE_MAX: 16
+      N8N_METRICS: true
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n/workflows:/workflows:ro
+    ports:
+      - "127.0.0.1:${N8N_PORT:-5678}:5678"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5678/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - emergency-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# ============================================================================
+# Volumes
+# ============================================================================
+volumes:
+  postgres_data:
+    driver: local
+    name: emergency_postgres_data
+  n8n_data:
+    driver: local
+    name: emergency_n8n_data
+
+# ============================================================================
+# Networks
+# ============================================================================
+networks:
+  emergency-network:
+    driver: bridge
+    name: ${DOCKER_NETWORK:-emergency-network}
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+# Made with Bob

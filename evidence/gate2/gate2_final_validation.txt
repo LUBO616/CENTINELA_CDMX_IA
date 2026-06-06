@@ -1,0 +1,461 @@
+===== DOCKER PS =====
+NAME               IMAGE                            COMMAND                  SERVICE         CREATED          STATUS                    PORTS
+api-analytics      911-ai-flow-demo-api-analytics   "uvicorn app:app --h…"   api-analytics   2 minutes ago    Up 2 minutes (healthy)    127.0.0.1:8003->8003/tcp
+api-ingest         911-ai-flow-demo-api-ingest      "uvicorn app:app --h…"   api-ingest      2 minutes ago    Up 2 minutes (healthy)    127.0.0.1:8001->8001/tcp
+api-triage         911-ai-flow-demo-api-triage      "uvicorn app:app --h…"   api-triage      2 minutes ago    Up 2 minutes (healthy)    127.0.0.1:8002->8002/tcp
+emergency-db       postgres:15-alpine               "docker-entrypoint.s…"   postgres        26 minutes ago   Up 26 minutes (healthy)   127.0.0.1:5432->5432/tcp
+n8n-orchestrator   n8nio/n8n:latest                 "tini -- /docker-ent…"   n8n             26 minutes ago   Up 26 minutes (healthy)   127.0.0.1:5678->5678/tcp
+===== TEST ENVIRONMENT ALL =====
+[0;34m============================================================================[0m
+[0;34m911 AI Flow Demo - Environment Test (Mode: all)[0m
+[0;34m============================================================================[0m
+
+[0;36m[1/6] Testing Docker and Services[0m
+
+[0;32m✓ PASS[0m Docker is running
+[0;32m✓ PASS[0m PostgreSQL container is running
+[0;32m✓ PASS[0m n8n container is running
+
+[0;36m[2/6] Testing Database Connectivity and Schema[0m
+
+[0;32m✓ PASS[0m PostgreSQL connection
+[0;32m✓ PASS[0m All 3 schemas exist (raw, core, analytics)
+[0;32m✓ PASS[0m All 4 tables exist
+[0;32m✓ PASS[0m All 3 analytics views exist
+
+[0;36m[3/6] Testing n8n Accessibility[0m
+
+[0;32m✓ PASS[0m n8n is accessible
+
+[0;36m[4/6] Testing API Health Endpoints[0m
+
+Testing api-ingest health... [0;32m✓ PASS[0m (JSON valid, field 'status' exists)
+Testing api-triage health... [0;32m✓ PASS[0m (JSON valid, field 'status' exists)
+Testing api-analytics health... [0;32m✓ PASS[0m (JSON valid, field 'status' exists)
+
+[0;36m[5/6] Testing Complete Flow (Ingest → Triage → Analytics)[0m
+
+Testing POST /raw-conversations... [0;32m✓ PASS[0m (call_id: 31a36fe7...)
+Testing POST /triage... [0;32m✓ PASS[0m (risk: 6, branch: critical)
+Testing POST /incidents... [0;32m✓ PASS[0m (incident_id: 20f3ddf1...)
+Testing GET /raw-conversations... [0;32m✓ PASS[0m
+Testing GET /incidents... [0;32m✓ PASS[0m
+
+[0;36m[6/6] Testing Analytics Endpoints[0m
+
+Testing GET /analytics/summary... [0;32m✓ PASS[0m (JSON valid, field 'total_incidents' exists)
+Testing GET /analytics/predictions... [0;32m✓ PASS[0m (JSON valid, field 'volume_forecast' exists)
+
+[0;34m============================================================================[0m
+[0;34mTest Summary[0m
+[0;34m============================================================================[0m
+
+[0;32mTests Passed: 18[0m
+[0;31mTests Failed: 0[0m
+
+[0;32m✓ All tests passed! Environment is working correctly.[0m
+
+[0;36mNext steps:[0m
+1. Seed demo data: [0;32m./scripts/05_seed_demo_data.sh direct[0m
+2. Access n8n at [0;32mhttp://localhost:5678[0m
+3. View analytics: [0;32mcurl http://localhost:8003/analytics/summary | jq[0m
+
+===== SEED DIRECT =====
+[0;34m============================================================================[0m
+[0;34m911 AI Flow Demo - Seeding Demo Data (Mode: direct)[0m
+[0;34m============================================================================[0m
+
+[0;35m[1/6] Scenario 1: Low Risk - Public Services[0m
+[0;36mProcessing: Low Risk - Pothole Report[0m
+  [1/3] Ingesting... [0;32m✓[0m (e18534f1...)
+  [2/3] Triaging... [0;32m✓[0m (risk: 1, branch: low)
+  [3/3] Recording... [0;32m✓[0m (9698f2a8...)
+[0;32m✓ Complete[0m
+
+[0;35m[2/6] Scenario 2: Medium Risk - Traffic Accident[0m
+[0;36mProcessing: Medium Risk - Traffic Accident[0m
+  [1/3] Ingesting... [0;32m✓[0m (01924936...)
+  [2/3] Triaging... [0;32m✓[0m (risk: 1, branch: low)
+  [3/3] Recording... [0;32m✓[0m (170db8ae...)
+[0;32m✓ Complete[0m
+
+[0;35m[3/6] Scenario 3: Critical P0 - Child in Danger[0m
+[0;36mProcessing: Critical P0 - Child Bleeding[0m
+  [1/3] Ingesting... [0;32m✓[0m (4846d382...)
+  [2/3] Triaging... [0;32m✓[0m (risk: 8, branch: critical)
+  [3/3] Recording... [0;32m✓[0m (c0c26899...)
+[0;32m✓ Complete[0m
+
+[0;35m[4/6] Additional: Gender Violence[0m
+[0;36mProcessing: Gender Violence[0m
+  [1/3] Ingesting... [0;32m✓[0m (142867a9...)
+  [2/3] Triaging... [0;32m✓[0m (risk: 6, branch: critical)
+  [3/3] Recording... [0;32m✓[0m (7206ae82...)
+[0;32m✓ Complete[0m
+
+[0;35m[5/6] Additional: Medical Emergency - Elderly[0m
+[0;36mProcessing: Medical Emergency - Elderly[0m
+  [1/3] Ingesting... [0;32m✓[0m (75a54cba...)
+  [2/3] Triaging... [0;32m✓[0m (risk: 1, branch: low)
+  [3/3] Recording... [0;32m✓[0m (e36be082...)
+[0;32m✓ Complete[0m
+
+[0;35m[6/6] Additional: Fire Emergency[0m
+[0;36mProcessing: Fire Emergency[0m
+  [1/3] Ingesting... [0;32m✓[0m (edd04ed6...)
+  [2/3] Triaging... [0;32m✓[0m (risk: 6, branch: critical)
+  [3/3] Recording... [0;32m✓[0m (316882b2...)
+[0;32m✓ Complete[0m
+
+[0;34m============================================================================[0m
+[0;34mVerifying Data in Database[0m
+[0;34m============================================================================[0m
+
+[0;36mRaw Conversations:[0m 18
+[0;36mTriage Results:[0m 15
+[0;36mIncidents:[0m 15
+
+[0;36mRisk Level Distribution:[0m
+ risk_level | count |  branch  
+------------+-------+----------
+          1 |     6 | low
+          6 |     7 | critical
+          8 |     2 | critical
+(3 rows)
+
+
+[0;36mCategory Distribution:[0m
+  case_category   | count 
+------------------+-------
+ protection_civil |     5
+ medical          |     4
+ unknown          |     4
+ public_services  |     2
+(4 rows)
+
+
+[0;34m============================================================================[0m
+[0;34mTesting Analytics Endpoints[0m
+[0;34m============================================================================[0m
+
+[0;36mGET /analytics/summary[0m
+{
+  "total_incidents": 15,
+  "by_risk_level": {
+    "1": 6,
+    "6": 7,
+    "8": 2
+  },
+  "by_branch": {
+    "low": 6,
+    "critical": 9
+  },
+  "by_category": {
+    "medical": 4,
+    "unknown": 4,
+    "protection_civil": 5,
+    "public_services": 2
+  },
+  "human_required_count": 9,
+  "p0_signals_count": 9,
+  "nna_involved_count": 0,
+  "last_updated": "2026-06-06T06:16:59.829522Z"
+}
+
+[0;36mGET /analytics/predictions[0m
+{
+  "predicted_calls": 15,
+  "confidence": 0.75,
+  "trend": "increasing",
+  "hourly_pattern": [
+    {
+      "hour": 0,
+      "avg_calls": 5
+    },
+    {
+      "hour": 1,
+      "avg_calls": 8
+    },
+    {
+      "hour": 2,
+      "avg_calls": 8
+    },
+    {
+      "hour": 3,
+      "avg_calls": 7
+    },
+    {
+      "hour": 4,
+      "avg_calls": 11
+    },
+    {
+      "hour": 5,
+      "avg_calls": 14
+    },
+    {
+      "hour": 6,
+      "avg_calls": 15
+    },
+    {
+      "hour": 7,
+      "avg_calls": 22
+    },
+    {
+      "hour": 8,
+      "avg_calls": 19
+    },
+    {
+      "hour": 9,
+      "avg_calls": 18
+    },
+    {
+      "hour": 10,
+      "avg_calls": 29
+    },
+    {
+      "hour": 11,
+      "avg_calls": 26
+    },
+    {
+      "hour": 12,
+      "avg_calls": 34
+    },
+    {
+      "hour": 13,
+      "avg_calls": 26
+    },
+    {
+      "hour": 14,
+      "avg_calls": 20
+    },
+    {
+      "hour": 15,
+      "avg_calls": 35
+    },
+    {
+      "hour": 16,
+      "avg_calls": 21
+    },
+    {
+      "hour": 17,
+      "avg_calls": 32
+    },
+    {
+      "hour": 18,
+      "avg_calls": 27
+    },
+    {
+      "hour": 19,
+      "avg_calls": 33
+    },
+    {
+      "hour": 20,
+      "avg_calls": 34
+    },
+    {
+      "hour": 21,
+      "avg_calls": 22
+    },
+    {
+      "hour": 22,
+      "avg_calls": 18
+    },
+    {
+      "hour": 23,
+      "avg_calls": 12
+    }
+  ]
+}
+
+[0;34m============================================================================[0m
+[0;34mDemo Data Seeding Complete[0m
+[0;34m============================================================================[0m
+
+[0;32m✓ Successfully seeded demo data using direct mode[0m
+
+[0;36mWhat was created:[0m
+  • 3 core test scenarios (low, medium, critical)
+  • 3 additional test cases (gender violence, elderly, fire)
+  • Raw conversations with PII redaction
+  • Triage results with risk scoring
+  • Analytics incidents and metrics
+
+[0;36mNext steps:[0m
+1. View incidents: [0;32mcurl http://localhost:8003/incidents | jq[0m
+2. View analytics: [0;32mcurl http://localhost:8003/analytics/summary | jq[0m
+3. Try n8n mode: [0;32m./scripts/05_seed_demo_data.sh n8n[0m
+4. Check logs: [0;32m./scripts/03_logs.sh[0m
+
+===== ANALYTICS SUMMARY =====
+{
+  "total_incidents": 15,
+  "by_risk_level": {
+    "1": 6,
+    "6": 7,
+    "8": 2
+  },
+  "by_branch": {
+    "low": 6,
+    "critical": 9
+  },
+  "by_category": {
+    "medical": 4,
+    "unknown": 4,
+    "protection_civil": 5,
+    "public_services": 2
+  },
+  "human_required_count": 9,
+  "p0_signals_count": 9,
+  "nna_involved_count": 0,
+  "last_updated": "2026-06-06T06:16:59.859774Z"
+}
+===== ANALYTICS PREDICTIONS =====
+{
+  "volume_forecast": {
+    "predicted_calls": 13,
+    "confidence": 0.75,
+    "trend": "increasing",
+    "hourly_pattern": [
+      {
+        "hour": 0,
+        "avg_calls": 8
+      },
+      {
+        "hour": 1,
+        "avg_calls": 13
+      },
+      {
+        "hour": 2,
+        "avg_calls": 8
+      },
+      {
+        "hour": 3,
+        "avg_calls": 7
+      },
+      {
+        "hour": 4,
+        "avg_calls": 7
+      },
+      {
+        "hour": 5,
+        "avg_calls": 11
+      },
+      {
+        "hour": 6,
+        "avg_calls": 15
+      },
+      {
+        "hour": 7,
+        "avg_calls": 16
+      },
+      {
+        "hour": 8,
+        "avg_calls": 25
+      },
+      {
+        "hour": 9,
+        "avg_calls": 27
+      },
+      {
+        "hour": 10,
+        "avg_calls": 32
+      },
+      {
+        "hour": 11,
+        "avg_calls": 33
+      },
+      {
+        "hour": 12,
+        "avg_calls": 28
+      },
+      {
+        "hour": 13,
+        "avg_calls": 18
+      },
+      {
+        "hour": 14,
+        "avg_calls": 17
+      },
+      {
+        "hour": 15,
+        "avg_calls": 21
+      },
+      {
+        "hour": 16,
+        "avg_calls": 27
+      },
+      {
+        "hour": 17,
+        "avg_calls": 29
+      },
+      {
+        "hour": 18,
+        "avg_calls": 22
+      },
+      {
+        "hour": 19,
+        "avg_calls": 28
+      },
+      {
+        "hour": 20,
+        "avg_calls": 21
+      },
+      {
+        "hour": 21,
+        "avg_calls": 33
+      },
+      {
+        "hour": 22,
+        "avg_calls": 26
+      },
+      {
+        "hour": 23,
+        "avg_calls": 5
+      }
+    ]
+  },
+  "category_distribution": {
+    "security": 0.0,
+    "medical": 0.27,
+    "protection_civil": 0.33,
+    "public_services": 0.13,
+    "social_support": 0.0,
+    "victim_attention": 0.0
+  },
+  "risk_zones": [
+    {
+      "zone": "Demo Location",
+      "risk_score": 1.0,
+      "incident_count": 4,
+      "primary_category": "medical"
+    },
+    {
+      "zone": "Demo Location",
+      "risk_score": 7.0,
+      "incident_count": 4,
+      "primary_category": "unknown"
+    },
+    {
+      "zone": "Colonia Centro",
+      "risk_score": 6.0,
+      "incident_count": 3,
+      "primary_category": "protection_civil"
+    },
+    {
+      "zone": "Demo Location",
+      "risk_score": 1.0,
+      "incident_count": 2,
+      "primary_category": "public_services"
+    },
+    {
+      "zone": "Demo Location",
+      "risk_score": 6.0,
+      "incident_count": 2,
+      "primary_category": "protection_civil"
+    }
+  ],
+  "generated_at": "2026-06-06T06:16:59.875196Z",
+  "ai_model_version": "mock-v1.0"
+}
+===== LOG PRIVACY CHECK =====
+OK: no PII encontrada en logs

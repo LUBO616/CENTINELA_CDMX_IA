@@ -1,0 +1,267 @@
+===== N8N WEBHOOK TEST =====
+[0;34m============================================================================[0m
+[0;34m911 AI Flow Demo - Testing n8n Webhook[0m
+[0;34m============================================================================[0m
+
+Checking n8n availability... [0;32m✓ OK[0m
+
+[0;35m[1/3] Scenario 1: Low Risk - Public Services[0m
+[0;36mTesting: Low Risk - Pothole Report[0m
+[0;32m✓ HTTP 200[0m
+  Success: [0;32mtrue[0m
+  Risk Level: [1;33m1[0m
+  Branch: [0;36mlow[0m
+  Human Required: false
+  P0 Signals: 0
+  [0;32m✓ Risk level in expected range [1-4][0m
+
+[0;35m[2/3] Scenario 2: Medium Risk - Traffic Accident[0m
+[0;36mTesting: Medium Risk - Traffic Accident[0m
+[0;32m✓ HTTP 200[0m
+  Success: [0;32mtrue[0m
+  Risk Level: [1;33m5[0m
+  Branch: [0;36mmid[0m
+  Human Required: true
+  P0 Signals: 0
+  [0;32m✓ Risk level in expected range [5-5][0m
+
+[0;35m[3/3] Scenario 3: Critical P0 - Child in Danger[0m
+[0;36mTesting: Critical P0 - Child Bleeding[0m
+[0;32m✓ HTTP 200[0m
+  Success: [0;32mtrue[0m
+  Risk Level: [1;33m8[0m
+  Branch: [0;36mcritical[0m
+  Human Required: true
+  P0 Signals: 1
+  [0;32m✓ Risk level in expected range [6-10][0m
+
+[0;34m============================================================================[0m
+[0;34mVerifying Data in Database[0m
+[0;34m============================================================================[0m
+
+[0;36mDatabase Records:[0m
+  Raw Conversations: 39
+  Triage Results: 30
+  Incidents: 30
+
+[0;36mLatest 3 Incidents:[0m
+    id    | risk_level |  branch  |  case_category  | human_required | has_p0_signals 
+----------+------------+----------+-----------------+----------------+----------------
+ 4b80297e |          8 | critical | unknown         | t              | t
+ 15489668 |          5 | mid      | medical         | t              | f
+ d19abbcb |          1 | low      | public_services | f              | f
+(3 rows)
+
+
+[0;34m============================================================================[0m
+[0;34mAnalytics Summary[0m
+[0;34m============================================================================[0m
+
+{
+  "total_incidents": 30,
+  "by_risk_level": {
+    "1": 12,
+    "5": 2,
+    "6": 10,
+    "8": 6
+  },
+  "by_branch": {
+    "low": 12,
+    "critical": 16,
+    "mid": 2
+  },
+  "human_required_count": 18,
+  "p0_signals_count": 16
+}
+
+[0;34m============================================================================[0m
+[0;34mTest Complete[0m
+[0;34m============================================================================[0m
+
+[0;32m✓ n8n webhook is working correctly[0m
+
+[0;36mNext steps:[0m
+1. View workflow executions in n8n: [0;32mhttp://localhost:5678[0m
+2. Check detailed analytics: [0;32mcurl http://localhost:8003/analytics/summary | jq[0m
+3. View predictions: [0;32mcurl http://localhost:8003/analytics/predictions | jq[0m
+
+===== ANALYTICS SUMMARY =====
+{
+  "total_incidents": 30,
+  "by_risk_level": {
+    "1": 12,
+    "5": 2,
+    "6": 10,
+    "8": 6
+  },
+  "by_branch": {
+    "low": 12,
+    "critical": 16,
+    "mid": 2
+  },
+  "by_category": {
+    "medical": 8,
+    "unknown": 8,
+    "protection_civil": 8,
+    "public_services": 6
+  },
+  "human_required_count": 18,
+  "p0_signals_count": 16,
+  "nna_involved_count": 0,
+  "last_updated": "2026-06-06T06:57:42.511207Z"
+}
+===== ANALYTICS PREDICTIONS =====
+{
+  "volume_forecast": {
+    "predicted_calls": 32,
+    "confidence": 0.75,
+    "trend": "increasing",
+    "hourly_pattern": [
+      {
+        "hour": 0,
+        "avg_calls": 10
+      },
+      {
+        "hour": 1,
+        "avg_calls": 8
+      },
+      {
+        "hour": 2,
+        "avg_calls": 7
+      },
+      {
+        "hour": 3,
+        "avg_calls": 8
+      },
+      {
+        "hour": 4,
+        "avg_calls": 9
+      },
+      {
+        "hour": 5,
+        "avg_calls": 14
+      },
+      {
+        "hour": 6,
+        "avg_calls": 30
+      },
+      {
+        "hour": 7,
+        "avg_calls": 19
+      },
+      {
+        "hour": 8,
+        "avg_calls": 19
+      },
+      {
+        "hour": 9,
+        "avg_calls": 28
+      },
+      {
+        "hour": 10,
+        "avg_calls": 18
+      },
+      {
+        "hour": 11,
+        "avg_calls": 20
+      },
+      {
+        "hour": 12,
+        "avg_calls": 30
+      },
+      {
+        "hour": 13,
+        "avg_calls": 21
+      },
+      {
+        "hour": 14,
+        "avg_calls": 22
+      },
+      {
+        "hour": 15,
+        "avg_calls": 26
+      },
+      {
+        "hour": 16,
+        "avg_calls": 33
+      },
+      {
+        "hour": 17,
+        "avg_calls": 20
+      },
+      {
+        "hour": 18,
+        "avg_calls": 15
+      },
+      {
+        "hour": 19,
+        "avg_calls": 22
+      },
+      {
+        "hour": 20,
+        "avg_calls": 16
+      },
+      {
+        "hour": 21,
+        "avg_calls": 32
+      },
+      {
+        "hour": 22,
+        "avg_calls": 19
+      },
+      {
+        "hour": 23,
+        "avg_calls": 9
+      }
+    ]
+  },
+  "category_distribution": {
+    "security": 0.0,
+    "medical": 0.27,
+    "protection_civil": 0.27,
+    "public_services": 0.2,
+    "social_support": 0.0,
+    "victim_attention": 0.0
+  },
+  "risk_zones": [
+    {
+      "zone": "Colonia Centro",
+      "risk_score": 6.0,
+      "incident_count": 6,
+      "primary_category": "protection_civil"
+    },
+    {
+      "zone": "Calle Madero 45, Colonia Centro",
+      "risk_score": 8.0,
+      "incident_count": 4,
+      "primary_category": "unknown"
+    },
+    {
+      "zone": "Colonia Centro",
+      "risk_score": 1.0,
+      "incident_count": 4,
+      "primary_category": "public_services"
+    },
+    {
+      "zone": "Demo Location",
+      "risk_score": 7.0,
+      "incident_count": 4,
+      "primary_category": "unknown"
+    },
+    {
+      "zone": "Demo Location",
+      "risk_score": 1.0,
+      "incident_count": 4,
+      "primary_category": "medical"
+    }
+  ],
+  "generated_at": "2026-06-06T06:57:42.523691Z",
+  "ai_model_version": "mock-v1.0"
+}
+===== DOCKER PS =====
+NAME               IMAGE                            COMMAND                  SERVICE         CREATED             STATUS                       PORTS
+api-analytics      911-ai-flow-demo-api-analytics   "uvicorn app:app --h…"   api-analytics   43 minutes ago      Up 42 minutes (healthy)      127.0.0.1:8003->8003/tcp
+api-ingest         911-ai-flow-demo-api-ingest      "uvicorn app:app --h…"   api-ingest      43 minutes ago      Up 42 minutes (healthy)      127.0.0.1:8001->8001/tcp
+api-triage         911-ai-flow-demo-api-triage      "uvicorn app:app --h…"   api-triage      18 seconds ago      Up 16 seconds (healthy)      127.0.0.1:8002->8002/tcp
+emergency-db       postgres:15-alpine               "docker-entrypoint.s…"   postgres        About an hour ago   Up About an hour (healthy)   127.0.0.1:5432->5432/tcp
+n8n-orchestrator   n8nio/n8n:latest                 "tini -- /docker-ent…"   n8n             About an hour ago   Up About an hour (healthy)   127.0.0.1:5678->5678/tcp

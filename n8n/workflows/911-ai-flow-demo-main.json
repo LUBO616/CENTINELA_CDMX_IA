@@ -1,0 +1,262 @@
+{
+  "name": "911 AI Flow Demo - Main",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "911-call",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "http://localhost:3000,http://localhost:5678"
+        }
+      },
+      "id": "webhook-911-call",
+      "name": "Webhook 911 Call",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "911-call-webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.body.transcript }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "validate-payload",
+      "name": "Validate Payload",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://api-ingest:8001/raw-conversations",
+        "authentication": "none",
+        "requestMethod": "POST",
+        "jsonParameters": true,
+        "options": {
+          "timeout": 10000,
+          "retry": {
+            "maxTries": 2,
+            "waitBetweenTries": 1000
+          }
+        },
+        "bodyParametersJson": "={{ JSON.stringify({\n  transcript: $json.body.transcript,\n  metadata: $json.body.metadata || { source: 'n8n_webhook', timestamp: new Date().toISOString() }\n}) }}"
+      },
+      "id": "call-api-ingest",
+      "name": "Call API Ingest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [650, 200],
+      "continueOnFail": false
+    },
+    {
+      "parameters": {
+        "url": "http://api-triage:8002/triage",
+        "authentication": "none",
+        "requestMethod": "POST",
+        "jsonParameters": true,
+        "options": {
+          "timeout": 15000,
+          "retry": {
+            "maxTries": 2,
+            "waitBetweenTries": 1000
+          }
+        },
+        "bodyParametersJson": "={{ JSON.stringify({\n  transcript: $json.redacted_text,\n  call_id: $json.call_id,\n  trace_id: $json.trace_id,\n  consent: $('Webhook 911 Call').item.json.body.solid_consent || true,\n  location_hint: $('Webhook 911 Call').item.json.body.location_hint || 'Unknown'\n}) }}"
+      },
+      "id": "call-api-triage",
+      "name": "Call API Triage",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [850, 200],
+      "continueOnFail": false
+    },
+    {
+      "parameters": {
+        "url": "http://api-analytics:8003/incidents",
+        "authentication": "none",
+        "requestMethod": "POST",
+        "jsonParameters": true,
+        "options": {
+          "timeout": 10000,
+          "retry": {
+            "maxTries": 2,
+            "waitBetweenTries": 1000
+          }
+        },
+        "bodyParametersJson": "={{ JSON.stringify({\n  call_id: $json.call_id,\n  trace_id: $json.trace_id,\n  risk_level: $json.risk_level,\n  branch: $json.branch,\n  case_category: $json.case_category,\n  human_required: $json.human_required,\n  p0_signals: $json.p0_signals,\n  location_hint: $('Webhook 911 Call').item.json.body.location_hint || 'Unknown'\n}) }}"
+      },
+      "id": "call-api-analytics",
+      "name": "Call API Analytics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1050, 200],
+      "continueOnFail": false
+    },
+    {
+      "parameters": {
+        "jsCode": "// Consolidate response from all services\nconst ingestData = $input.first().json;\nconst triageData = $('Call API Triage').first().json;\nconst analyticsData = $('Call API Analytics').first().json;\n\nreturn {\n  json: {\n    success: true,\n    call_id: triageData.call_id,\n    trace_id: triageData.trace_id,\n    risk_level: triageData.risk_level,\n    branch: triageData.branch,\n    case_category: triageData.case_category,\n    human_required: triageData.human_required,\n    p0_signals: triageData.p0_signals,\n    primary_authority: triageData.primary_authority,\n    support_authorities: triageData.support_authorities,\n    incident_id: analyticsData.incident_id,\n    status: 'processed',\n    public_stage_phrase: triageData.public_stage_phrase,\n    rationale_public: triageData.rationale_public,\n    processed_at: new Date().toISOString()\n  }\n};"
+      },
+      "id": "consolidate-response",
+      "name": "Consolidate Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}"
+      },
+      "id": "respond-success",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1450, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Handle validation error\nreturn {\n  json: {\n    success: false,\n    error: 'Invalid payload',\n    message: 'Field transcript is required',\n    received: $input.first().json.body\n  }\n};"
+      },
+      "id": "error-invalid-payload",
+      "name": "Error Invalid Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 400,
+        "responseBody": "={{ JSON.stringify($json) }}"
+      },
+      "id": "respond-error",
+      "name": "Respond Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [850, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Handle service error\nconst error = $input.first().error;\nconst context = $input.first().json;\n\nreturn {\n  json: {\n    success: false,\n    error: 'Service error',\n    message: error?.message || 'An error occurred processing the call',\n    call_id: context?.call_id || null,\n    trace_id: context?.trace_id || null,\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "error-service-failure",
+      "name": "Error Service Failure",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 400]
+    }
+  ],
+  "connections": {
+    "Webhook 911 Call": {
+      "main": [
+        [
+          {
+            "node": "Validate Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Payload": {
+      "main": [
+        [
+          {
+            "node": "Call API Ingest",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Invalid Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call API Ingest": {
+      "main": [
+        [
+          {
+            "node": "Call API Triage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call API Triage": {
+      "main": [
+        [
+          {
+            "node": "Call API Analytics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call API Analytics": {
+      "main": [
+        [
+          {
+            "node": "Consolidate Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consolidate Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Invalid Payload": {
+      "main": [
+        [
+          {
+            "node": "Respond Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "id": "911-ai-flow-demo-main",
+  "meta": {
+    "instanceId": "911-ai-flow-demo"
+  },
+  "tags": [
+    {
+      "name": "emergency",
+      "id": "1"
+    },
+    {
+      "name": "demo",
+      "id": "2"
+    }
+  ]
+}
