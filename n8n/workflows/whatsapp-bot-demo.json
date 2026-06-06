@@ -1,0 +1,200 @@
+{
+  "name": "WhatsApp Bot Demo - 911 AI Flow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-bot",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-whatsapp-bot",
+      "name": "Webhook WhatsApp Bot",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "whatsapp-bot"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Normalize incoming WhatsApp message\nconst body = $input.item.json.body || {};\n\nconst from = body.from || \"unknown\";\nconst message = body.message || \"\";\nconst timestamp = body.timestamp || new Date().toISOString();\nconst profileName = body.profile_name || \"Usuario\";\n\n// Hash phone number for privacy (don't store full number)\nconst crypto = require('crypto');\nconst hashedFrom = crypto.createHash('sha256').update(from).digest('hex').substring(0, 16);\n\nreturn {\n  json: {\n    from_hash: hashedFrom,\n    message: message,\n    message_lower: message.toLowerCase(),\n    timestamp: timestamp,\n    profile_name: profileName,\n    original_length: message.length\n  }\n};"
+      },
+      "id": "normalize-message",
+      "name": "Normalize Message",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Keyword-based categorizer for WhatsApp messages\nconst message = $input.item.json.message_lower || \"\";\n\n// Category keywords\nconst keywords = {\n  security: [\n    \"robo\", \"asalto\", \"arma\", \"disparos\", \"violencia\", \"secuestro\",\n    \"amenaza\", \"delincuente\", \"ladrón\", \"asaltante\"\n  ],\n  medical: [\n    \"herido\", \"inconsciente\", \"sangrado\", \"ambulancia\", \"infarto\",\n    \"convulsiones\", \"dolor\", \"accidente\", \"lesión\", \"enfermo\"\n  ],\n  protection_civil: [\n    \"incendio\", \"fuga de gas\", \"derrumbe\", \"inundación\", \"explosión\",\n    \"fuego\", \"humo\", \"gas\", \"temblor\", \"sismo\"\n  ],\n  public_services: [\n    \"bache\", \"semáforo\", \"alumbrado\", \"árbol caído\", \"fuga de agua\",\n    \"basura\", \"alcantarilla\", \"poste\", \"cable\"\n  ],\n  social_support: [\n    \"persona vulnerable\", \"adulto mayor\", \"extraviado\", \"indigencia\",\n    \"abandono\", \"sin hogar\", \"perdido\"\n  ],\n  victim_attention: [\n    \"violencia familiar\", \"abuso\", \"agresión\", \"víctima\", \"maltrato\",\n    \"violencia doméstica\", \"golpes\"\n  ]\n};\n\n// P0 keywords (critical signals)\nconst p0Keywords = [\n  \"sangre\", \"sangrado grave\", \"inconsciente\", \"arma de fuego\",\n  \"incendio\", \"explosión\", \"bebé\", \"niño\", \"niña\", \"secuestro\",\n  \"amenaza de muerte\", \"no respira\"\n];\n\n// Detect category\nlet detectedCategory = \"unknown\";\nlet maxMatches = 0;\nlet detectedKeywords = [];\n\nfor (const [category, categoryKeywords] of Object.entries(keywords)) {\n  let matches = 0;\n  const foundKeywords = [];\n  \n  for (const keyword of categoryKeywords) {\n    if (message.includes(keyword)) {\n      matches++;\n      foundKeywords.push(keyword);\n    }\n  }\n  \n  if (matches > maxMatches) {\n    maxMatches = matches;\n    detectedCategory = category;\n    detectedKeywords = foundKeywords;\n  }\n}\n\n// Detect P0 signals\nconst p0Signals = [];\nfor (const p0Keyword of p0Keywords) {\n  if (message.includes(p0Keyword)) {\n    p0Signals.push(p0Keyword);\n  }\n}\n\n// Determine risk hint\nlet riskHint = \"low\";\nif (p0Signals.length > 0) {\n  riskHint = \"critical\";\n} else if (detectedCategory === \"security\" || detectedCategory === \"medical\" || detectedCategory === \"protection_civil\") {\n  riskHint = \"mid\";\n}\n\n// Extract location hint (simple pattern matching)\nconst locationPatterns = [\n  /en\\s+([a-záéíóúñ\\s]+)/i,\n  /colonia\\s+([a-záéíóúñ\\s]+)/i,\n  /calle\\s+([a-záéíóúñ\\s]+)/i\n];\n\nlet locationHint = \"\";\nfor (const pattern of locationPatterns) {\n  const match = message.match(pattern);\n  if (match && match[1]) {\n    locationHint = match[1].trim().substring(0, 50);\n    break;\n  }\n}\n\nreturn {\n  json: {\n    ...($input.item.json),\n    case_category: detectedCategory,\n    detected_keywords: detectedKeywords,\n    p0_signals: p0Signals,\n    risk_hint: riskHint,\n    location_hint: locationHint || \"Ubicación no especificada\",\n    classification_confidence: maxMatches > 0 ? \"high\" : \"low\"\n  }\n};"
+      },
+      "id": "keyword-categorizer",
+      "name": "Keyword Categorizer",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Build 911 call payload for main workflow\nconst data = $input.item.json;\n\n// Build transcript (sanitized)\nconst transcript = `Reporte vía WhatsApp Bot: ${data.message}`;\n\n// Build metadata\nconst metadata = {\n  source: \"whatsapp_bot_demo\",\n  from_hash: data.from_hash,\n  profile_name: data.profile_name,\n  detected_category: data.case_category,\n  detected_keywords: data.detected_keywords,\n  p0_signals: data.p0_signals,\n  risk_hint: data.risk_hint,\n  classification_confidence: data.classification_confidence,\n  bot_processed_at: new Date().toISOString()\n};\n\nreturn {\n  json: {\n    transcript: transcript,\n    location_hint: data.location_hint,\n    solid_consent: true,\n    metadata: metadata\n  }\n};"
+      },
+      "id": "build-911-payload",
+      "name": "Build 911 Payload",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://api-gateway:8010/911-call",
+        "authentication": "none",
+        "requestMethod": "POST",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={{ JSON.stringify($json) }}"
+      },
+      "id": "call-api-gateway",
+      "name": "Call API Gateway",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Build bot response for WhatsApp user\nconst callResult = $input.item.json;\nconst originalData = $node[\"Keyword Categorizer\"].json;\n\n// Determine response based on category and risk\nlet responseMessage = \"\";\n\nif (originalData.p0_signals && originalData.p0_signals.length > 0) {\n  responseMessage = `⚠️ EMERGENCIA CRÍTICA DETECTADA\\n\\n`;\n  responseMessage += `Tu reporte ha sido clasificado como PRIORIDAD MÁXIMA.\\n\\n`;\n  responseMessage += `Categoría: ${originalData.case_category}\\n`;\n  responseMessage += `Señales P0: ${originalData.p0_signals.join(\", \")}\\n\\n`;\n  responseMessage += `Un operador humano revisará tu caso de inmediato.\\n\\n`;\n} else if (originalData.risk_hint === \"mid\" || originalData.risk_hint === \"critical\") {\n  responseMessage = `✅ Reporte recibido\\n\\n`;\n  responseMessage += `Tu reporte ha sido clasificado como: ${originalData.case_category}\\n`;\n  responseMessage += `Nivel de prioridad: ${originalData.risk_hint === \"critical\" ? \"CRÍTICO\" : \"MEDIO\"}\\n\\n`;\n  responseMessage += `Un operador humano debe revisar el caso.\\n\\n`;\n} else {\n  responseMessage = `✅ Reporte recibido\\n\\n`;\n  responseMessage += `Tu reporte ha sido registrado.\\n`;\n  responseMessage += `Categoría: ${originalData.case_category}\\n\\n`;\n  responseMessage += `Será procesado según prioridad.\\n\\n`;\n}\n\n// Add folio\nif (callResult.call_id) {\n  responseMessage += `Folio: ${callResult.call_id.substring(0, 8)}\\n`;\n}\n\nif (callResult.incident_id) {\n  responseMessage += `Incidente: ${callResult.incident_id.substring(0, 8)}\\n`;\n}\n\nresponseMessage += `\\nGracias por tu reporte. 🚨`;\n\nreturn {\n  json: {\n    status: \"success\",\n    bot_reply: responseMessage,\n    call_id: callResult.call_id,\n    incident_id: callResult.incident_id,\n    risk_level: callResult.risk_level,\n    branch: callResult.branch,\n    case_category: callResult.case_category,\n    human_required: callResult.human_required,\n    processed_at: callResult.processed_at\n  }\n};"
+      },
+      "id": "build-bot-response",
+      "name": "Build Bot Response",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}"
+      },
+      "id": "respond-json",
+      "name": "Respond JSON",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Error handler\nconst error = $input.item.json.error || \"Unknown error\";\n\nreturn {\n  json: {\n    status: \"error\",\n    bot_reply: \"❌ Lo sentimos, hubo un error al procesar tu reporte. Por favor intenta nuevamente o llama al 911.\",\n    error: error,\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "error-handler",
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1050, 500]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}"
+      },
+      "id": "respond-error",
+      "name": "Respond Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1250, 500]
+    }
+  ],
+  "connections": {
+    "Webhook WhatsApp Bot": {
+      "main": [
+        [
+          {
+            "node": "Normalize Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Message": {
+      "main": [
+        [
+          {
+            "node": "Keyword Categorizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Keyword Categorizer": {
+      "main": [
+        [
+          {
+            "node": "Build 911 Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build 911 Payload": {
+      "main": [
+        [
+          {
+            "node": "Call API Gateway",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call API Gateway": {
+      "main": [
+        [
+          {
+            "node": "Build Bot Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Bot Response": {
+      "main": [
+        [
+          {
+            "node": "Respond JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Handler": {
+      "main": [
+        [
+          {
+            "node": "Respond Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "whatsapp-bot-demo-v1",
+  "id": "whatsapp-bot-demo",
+  "meta": {
+    "instanceId": "centinela-cdmx-ia"
+  },
+  "tags": []
+}

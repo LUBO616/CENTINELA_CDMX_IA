@@ -1,0 +1,82 @@
+===== GATE 8 WHATSAPP BOT VALIDATION =====
+Sat Jun  6 11:58:40 AM CST 2026
+
+==========================================
+Testing WhatsApp Bot Demo Workflow
+==========================================
+[1;33mTesting WhatsApp Bot webhook at: http://localhost:5678/webhook/whatsapp-bot[0m
+
+[1;33mTest: incendio[0m
+Message: Hay un incendio en mi edificio en colonia Centro
+[0;32m✓ PASSED[0m
+  Call ID: WA-DEMO-1780768720557
+  Category: protection_civil
+  Branch: critical
+  Human Required: true
+  Bot Reply: Recibimos tu reporte. Se clasificó como protection_civil con prioridad critical....
+
+[1;33mTest: bache[0m
+Message: Hay un bache enorme en Reforma
+[0;32m✓ PASSED[0m
+  Call ID: WA-DEMO-1780768721623
+  Category: public_services
+  Branch: low
+  Human Required: false
+  Bot Reply: Recibimos tu reporte. Se clasificó como public_services con prioridad low. Folio...
+
+[1;33mTest: herido[0m
+Message: Hay una persona herida inconsciente en la calle
+[0;32m✓ PASSED[0m
+  Call ID: WA-DEMO-1780768722691
+  Category: medical
+  Branch: mid
+  Human Required: true
+  Bot Reply: Recibimos tu reporte. Se clasificó como medical con prioridad mid. Folio: WA-DEM...
+
+[1;33mTest: robo[0m
+Message: Me están robando con un arma en Iztapalapa
+[0;32m✓ PASSED[0m
+  Call ID: WA-DEMO-1780768723756
+  Category: security
+  Branch: mid
+  Human Required: true
+  Bot Reply: Recibimos tu reporte. Se clasificó como security con prioridad mid. Folio: WA-DE...
+
+[1;33mTest: violencia[0m
+Message: Escucho violencia familiar en el departamento de al lado
+[0;32m✓ PASSED[0m
+  Call ID: WA-DEMO-1780768724842
+  Category: victim_attention
+  Branch: mid
+  Human Required: true
+  Bot Reply: Recibimos tu reporte. Se clasificó como victim_attention con prioridad mid. Foli...
+
+==========================================
+Test Summary
+==========================================
+Total tests: 5
+[0;32mPassed: 5[0m
+[0;31mFailed: 0[0m
+
+[0;32m✓ All tests passed![0m
+
+===== SAMPLE WEBHOOK RESPONSE =====
+{
+  "status": "success",
+  "call_id": "WA-DEMO-1780768725911",
+  "incident_id": "WA-DEMO-1780768725911",
+  "bot_reply": "Recibimos tu reporte. Se clasificó como protection_civil con prioridad critical. Folio: WA-DEMO-1780768725911. Demo educativa: no usar para emergencias reales.",
+  "category": "protection_civil",
+  "risk_level": "critical",
+  "case_category": "protection_civil",
+  "branch": "critical",
+  "human_required": true,
+  "p0_signals": [
+    "incendio"
+  ],
+  "source": "whatsapp_bot_demo",
+  "privacy": {
+    "phone_hashed": true,
+    "pii_redacted": true
+  }
+}
