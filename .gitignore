@@ -141,3 +141,17 @@ docs/_build/
 site/
 
 # Made with Bob
+
+# Local backups / evidence archives
+backups/
+*.tar.gz
+
+# Environment files
+.env
+.env.local
+lovable-dashboard/.env
+lovable-dashboard/.env.local
+
+# Local editor/runtime files
+node_modules/
+lovable-dashboard/node_modules/
