@@ -11,9 +11,13 @@ import {
   TrendingDown,
   Minus,
   MapPin,
+  Scale,
+  Target,
+  Clock,
+  TrendingDown as CorrelationIcon,
 } from "lucide-react";
 import { StatCard } from "@/components/stat-card";
-import { fetchSummary, fetchPredictions } from "@/lib/centinela-api";
+import { fetchSummary, fetchPredictions, fetchJudgeMetrics } from "@/lib/centinela-api";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -36,9 +40,16 @@ function Dashboard() {
     queryFn: fetchPredictions,
     refetchInterval: 30000,
   });
+  const judgeQ = useQuery({
+    queryKey: ["judgeMetrics"],
+    queryFn: fetchJudgeMetrics,
+    refetchInterval: 60000,
+    retry: false,
+  });
 
   const s = summaryQ.data?.data;
   const p = predQ.data?.data;
+  const j = judgeQ.data;
   const summaryMock = summaryQ.data?.isMock;
   const predMock = predQ.data?.isMock;
 
@@ -168,7 +179,7 @@ function Dashboard() {
             <ul className="space-y-2.5">
               {p
                 ? p.risk_zones.map((z, idx) => (
-                    <li key={`-`} className="flex items-center gap-3">
+                    <li key={idx} className="flex items-center gap-3">
                       <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
                       <div className="flex-1">
                         <div className="flex justify-between text-xs">
@@ -198,8 +209,113 @@ function Dashboard() {
           </div>
         </div>
       </section>
+
+      {/* Judge Metrics Section */}
+      <section>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Métricas para jueces / Equidad territorial
+          </h2>
+        </div>
+        <p className="mb-4 text-xs text-muted-foreground italic">
+          Datos geoespaciales sintéticos para demo. No representan límites oficiales ni incidentes reales.
+        </p>
+
+        {j?.status === "not_generated" ? (
+          <div className="rounded-xl border border-risk-mid/40 bg-risk-mid/10 p-5">
+            <div className="flex items-center gap-2 text-risk-mid">
+              <AlertTriangle className="h-5 w-5" />
+              <h3 className="font-semibold">Métricas no generadas</h3>
+            </div>
+            <p className="mt-2 text-sm text-risk-mid/90">
+              {j?.message || "Ejecuta ./scripts/08_setup_postgis_demo.sh para generar las métricas PostGIS."}
+            </p>
+          </div>
+        ) : judgeQ.isError ? (
+          <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-5">
+            <div className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              <h3 className="font-semibold">Error al cargar métricas</h3>
+            </div>
+            <p className="mt-2 text-sm text-destructive/90">
+              No se pudieron cargar las métricas de jueces. Verifica que el backend esté activo.
+            </p>
+          </div>
+        ) : j?.metrics ? (
+          <>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <StatCard
+                label="Gini territorial"
+                value={j.metrics.gini_risk_norm.value.toFixed(2)}
+                hint={`Umbral: ≤${j.metrics.gini_risk_norm.threshold}`}
+                icon={<Scale className="h-5 w-5" />}
+                tone={j.metrics.gini_risk_norm.pass ? "low" : "mid"}
+              />
+              <StatCard
+                label="Recall P0"
+                value={`${(j.metrics.recall_p0_detection_rate.value * 100).toFixed(1)}%`}
+                hint={`Umbral: ≥${(j.metrics.recall_p0_detection_rate.threshold * 100).toFixed(0)}%`}
+                icon={<Target className="h-5 w-5" />}
+                tone={j.metrics.recall_p0_detection_rate.pass ? "low" : "critical"}
+              />
+              <StatCard
+                label="Horas liberadas/día"
+                value={j.metrics.operator_hours_freed_per_day.value.toFixed(1)}
+                hint={`Umbral: ≥${j.metrics.operator_hours_freed_per_day.threshold}h`}
+                icon={<Clock className="h-5 w-5" />}
+                tone={j.metrics.operator_hours_freed_per_day.pass ? "analytics" : "mid"}
+              />
+              <StatCard
+                label="Correlación acceso digital"
+                value={Math.abs(j.metrics.coverage_bias_correlation_after.value).toFixed(2)}
+                hint={`Umbral: ≤${j.metrics.coverage_bias_correlation_after.threshold}`}
+                icon={<CorrelationIcon className="h-5 w-5" />}
+                tone={j.metrics.coverage_bias_correlation_after.pass ? "low" : "mid"}
+              />
+            </div>
+
+            {j.by_alcaldia && j.by_alcaldia.length > 0 && (
+              <div className="mt-6 rounded-xl border border-border bg-card p-5">
+                <h3 className="mb-4 text-sm font-semibold">Distribución por alcaldía</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
+                        <th className="pb-2 pr-4">Alcaldía</th>
+                        <th className="pb-2 pr-4 text-right">Incidentes</th>
+                        <th className="pb-2 pr-4 text-right">Riesgo prom.</th>
+                        <th className="pb-2 pr-4 text-right">P0</th>
+                        <th className="pb-2 pr-4 text-right">Acceso digital</th>
+                        <th className="pb-2 text-right">Percentil</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {j.by_alcaldia.map((item) => (
+                        <tr key={item.alcaldia_norm} className="border-b border-border/50 last:border-0">
+                          <td className="py-2 pr-4 font-medium">{item.alcaldia}</td>
+                          <td className="py-2 pr-4 text-right font-mono">{item.incident_count}</td>
+                          <td className="py-2 pr-4 text-right font-mono">{item.avg_risk.toFixed(1)}</td>
+                          <td className="py-2 pr-4 text-right font-mono">{item.p0_count}</td>
+                          <td className="py-2 pr-4 text-right font-mono">{item.digital_access_index.toFixed(2)}</td>
+                          <td className="py-2 text-right font-mono text-muted-foreground">{item.percentile}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="grid h-32 place-items-center rounded-xl border border-dashed border-border bg-card/50">
+            <p className="text-sm text-muted-foreground">Cargando métricas de jueces...</p>
+          </div>
+        )}
+      </section>
     </div>
   );
+
+
 }
 
 function TrendBadge({ trend }: { trend?: string }) {
