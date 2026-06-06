@@ -1,6 +1,7 @@
-# 911 AI Flow Demo
+# CENTINELA_CDMX_IA
 
-**Demo educativa de flujo 911 asistido por IA simulada para Ciudad de México**
+
+Demo de flujo 911 asistido por Agentes de IA para Ciudad de México
 
 [![License](https://img.shields.io/badge/license-Educational-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/)
