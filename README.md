@@ -88,11 +88,11 @@ Para garantizar que nuestro sistema no perpetúa desigualdades, medimos la distr
 👉 **Conclusión:** El sistema de pre‑clasificación de CENTINELA_CDMX_IA asegura que una emergencia tenga la misma probabilidad de ser priorizada correctamente, sin importar si ocurre en una zona densamente poblada o marginada, contribuyendo a una atención más justa y eficiente para toda la Ciudad de México.
 ### Impacto Esperado
 
-- ⏱️ **Reducción de tiempo** de clasificación inicial
-- 🎯 **Priorización automática** de casos críticos
-- 👥 **Protección de grupos vulnerables** (NNA, adultos mayores)
-- 📊 **Datos para toma de decisiones** (analytics, predicciones)
-- 🔒 **Privacidad by design** (redacción automática de PII)
+- Reducción de tiempo** de clasificación inicial
+- Priorización automática** de casos críticos
+- Protección de grupos vulnerables** (NNA, adultos mayores)
+- Datos para toma de decisiones** (analytics, predicciones)
+- Privacidad by design** (redacción automática de PII)
 
 ---
 
