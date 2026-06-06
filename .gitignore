@@ -158,3 +158,21 @@ lovable-dashboard/node_modules/
 *.bak
 *.bak2
 *_backup*
+
+# Local backups / archives
+backups/
+*.tar.gz
+
+# Environment files
+.env
+.env.local
+lovable-dashboard/.env
+lovable-dashboard/.env.local
+
+# Local deps
+node_modules/
+lovable-dashboard/node_modules/
+
+# Local source backups
+*.bak
+*.bak2
