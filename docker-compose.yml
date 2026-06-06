@@ -15,17 +15,17 @@ version: '3.8'
 
 services:
   # --------------------------------------------------------------------------
-  # PostgreSQL Database
+  # PostgreSQL Database with PostGIS (Gate 6)
   # --------------------------------------------------------------------------
   postgres:
-    image: postgres:15-alpine
+    image: postgis/postgis:15-3.4-alpine
     container_name: emergency-db
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-emergency_demo}
       POSTGRES_USER: ${POSTGRES_USER:-emergency_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
-      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=es_MX.UTF-8"
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro

@@ -1,0 +1,19 @@
+{
+  "version": "1.0.0",
+  "description": "Umbrales y constantes para métricas de equidad territorial - 911 AI Flow Demo",
+  "synthetic_data": true,
+  "thresholds": {
+    "gini_umbral_exito": 0.35,
+    "gini_umbral_alerta": 0.45,
+    "recall_p0_umbral": 0.95,
+    "corr_digital_umbral": 0.20,
+    "min_por_llamada_falsa_high": 8,
+    "min_por_llamada_falsa_low": 3,
+    "operator_hours_freed_threshold": 2.0
+  },
+  "metadata": {
+    "created_at": "2026-06-06",
+    "purpose": "Demo educativa - Hackathon",
+    "disclaimer": "Todos los valores son sintéticos y con fines educativos únicamente"
+  }
+}
