@@ -1,0 +1,213 @@
+===== GATE 7 PREDICTIVE DASHBOARD VALIDATION =====
+Sat Jun  6 12:02:29 PM CST 2026
+
+===== DOCKER PS =====
+NAME               IMAGE                            COMMAND                  SERVICE         CREATED         STATUS                     PORTS
+api-analytics      911-ai-flow-demo-api-analytics   "uvicorn app:app --h…"   api-analytics   2 minutes ago   Up 2 minutes (healthy)     127.0.0.1:8003->8003/tcp
+api-gateway        911-ai-flow-demo-api-gateway     "uvicorn app:app --h…"   api-gateway     2 minutes ago   Up 2 minutes (unhealthy)   127.0.0.1:8010->8010/tcp
+api-ingest         911-ai-flow-demo-api-ingest      "uvicorn app:app --h…"   api-ingest      12 hours ago    Up 58 minutes (healthy)    127.0.0.1:8001->8001/tcp
+api-triage         911-ai-flow-demo-api-triage      "uvicorn app:app --h…"   api-triage      11 hours ago    Up 58 minutes (healthy)    127.0.0.1:8002->8002/tcp
+emergency-db       postgis/postgis:15-3.4-alpine    "docker-entrypoint.s…"   postgres        3 hours ago     Up 58 minutes (healthy)    127.0.0.1:5432->5432/tcp
+n8n-orchestrator   n8nio/n8n:latest                 "tini -- /docker-ent…"   n8n             12 hours ago    Up 58 minutes (healthy)    127.0.0.1:5678->5678/tcp
+
+===== PREDICTIVE OVERVIEW =====
+{
+  "total_incidents": 5481,
+  "last_24h": 170,
+  "last_7d": 1263,
+  "critical_count": 823,
+  "mid_count": 1935,
+  "low_count": 2723,
+  "human_required_count": 3836,
+  "p0_count": 446,
+  "generated_at": "2026-06-06T18:02:29.688697Z"
+}
+
+===== PREDICTIVE FORECAST =====
+{
+  "next_hour_expected_calls": 8,
+  "next_24h_expected_calls": 174,
+  "trend": "stable",
+  "confidence": 0.75,
+  "risk_hotspots": [],
+  "recommended_staffing_level": "low",
+  "generated_at": "2026-06-06T18:02:29.720326Z"
+}
+
+===== PREDICTIVE CATEGORIES =====
+{
+  "categories": [
+    {
+      "category": "security",
+      "incident_count": 1279,
+      "avg_risk": 4.01,
+      "critical_count": 195,
+      "human_required_count": 911,
+      "p0_count": 142
+    },
+    {
+      "category": "medical",
+      "incident_count": 1106,
+      "avg_risk": 3.97,
+      "critical_count": 155,
+      "human_required_count": 767,
+      "p0_count": 105
+    },
+    {
+      "category": "public_services",
+      "incident_count": 1091,
+      "avg_risk": 4.06,
+      "critical_count": 175,
+      "human_required_count": 753,
+      "p0_count": 0
+    },
+    {
+      "category": "protection_civil",
+      "incident_count": 797,
+      "avg_risk": 4.12,
+      "critical_count": 121,
+      "human_required_count": 571,
+      "p0_count": 85
+    },
+    {
+      "category": "social_support",
+      "incident_count": 586,
+      "avg_risk": 4.03,
+      "critical_count": 83,
+      "human_required_count": 411,
+      "p0_count": 63
+    },
+    {
+      "category": "victim_attention",
+      "incident_count": 515,
+      "avg_risk": 3.99,
+      "critical_count": 77,
+      "human_required_count": 340,
+      "p0_count": 51
+    },
+    {
+      "category": "unknown",
+      "incident_count": 107,
+      "avg_risk": 4.52,
+      "critical_count": 17,
+      "human_required_count": 83,
+      "p0_count": 0
+    }
+  ],
+  "generated_at": "2026-06-06T18:02:29.742933Z"
+}
+
+===== PREDICTIVE ALCALDIAS =====
+{
+  "alcaldias": [
+    {
+      "alcaldia": "iztapalapa",
+      "incident_count": 727,
+      "avg_risk": 4.24,
+      "critical_count": 120,
+      "p0_count": 71
+    },
+    {
+      "alcaldia": "cuajimalpa",
+      "incident_count": 387,
+      "avg_risk": 3.87,
+      "critical_count": 46,
+      "p0_count": 28
+    },
+    {
+      "alcaldia": "magdalena_contreras",
+      "incident_count": 368,
+      "avg_risk": 4.18,
+      "critical_count": 65,
+      "p0_count": 38
+    },
+    {
+      "alcaldia": "coyoacan",
+      "incident_count": 350,
+      "avg_risk": 3.94,
+      "critical_count": 56,
+      "p0_count": 27
+    },
+    {
+      "alcaldia": "miguel_hidalgo",
+      "incident_count": 350,
+      "avg_risk": 3.87,
+      "critical_count": 50,
+      "p0_count": 32
+    },
+    {
+      "alcaldia": "venustiano_carranza",
+      "incident_count": 347,
+      "avg_risk": 4.13,
+      "critical_count": 61,
+      "p0_count": 34
+    },
+    {
+      "alcaldia": "gustavo_a_madero",
+      "incident_count": 346,
+      "avg_risk": 3.93,
+      "critical_count": 41,
+      "p0_count": 22
+    },
+    {
+      "alcaldia": "benito_juarez",
+      "incident_count": 343,
+      "avg_risk": 4.07,
+      "critical_count": 54,
+      "p0_count": 30
+    },
+    {
+      "alcaldia": "tlalpan",
+      "incident_count": 337,
+      "avg_risk": 3.95,
+      "critical_count": 49,
+      "p0_count": 25
+    },
+    {
+      "alcaldia": "alvaro_obregon",
+      "incident_count": 332,
+      "avg_risk": 4.1,
+      "critical_count": 43,
+      "p0_count": 19
+    }
+  ],
+  "generated_at": "2026-06-06T18:02:29.772635Z"
+}
+
+===== FRONTEND BUILD =====
+
+> build
+> vite build
+
+[@lovable.dev/vite-tanstack-config] No Lovable context detected — skipping nitro deploy plugin. Pass `nitro: true` (or `nitro: { ... }`) to force-enable.
+[@lovable.dev/vite-tanstack-config] No Lovable context detected — skipping nitro deploy plugin. Pass `nitro: true` (or `nitro: { ... }`) to force-enable.
+[@lovable.dev/vite-tanstack-config] No Lovable context detected — skipping nitro deploy plugin. Pass `nitro: true` (or `nitro: { ... }`) to force-enable.
+vite v7.3.5 building client environment for production...
+transforming...
+✓ 2535 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/client/assets/styles-F_fTTNQT.css         82.76 kB │ gzip:  13.92 kB
+dist/client/assets/shield-check-DbDkN7IG.js     0.47 kB │ gzip:   0.32 kB
+dist/client/assets/centinela-api-C-4QW3sN.js    3.12 kB │ gzip:   1.16 kB
+dist/client/assets/trending-down-N0z7pxjZ.js    9.36 kB │ gzip:   3.52 kB
+dist/client/assets/simular-dAuSmLmM.js         12.76 kB │ gzip:   4.49 kB
+dist/client/assets/index-gF8gwaRr.js           13.54 kB │ gzip:   3.85 kB
+dist/client/assets/index-afXW12kn.js          355.22 kB │ gzip: 113.18 kB
+dist/client/assets/predictivo-DyULn39_.js     448.74 kB │ gzip: 122.57 kB
+✓ built in 3.16s
+vite v7.3.5 building ssr environment for production...
+transforming...
+✓ 69 modules transformed.
+rendering chunks...
+dist/server/assets/empty-plugin-adapters-BFgPZ6_d.js        0.13 kB
+dist/server/assets/_tanstack-start-manifest_v-DgSWizat.js   1.13 kB
+dist/server/assets/start-g-8Wfzlb.js                        1.71 kB
+dist/server/server.js                                       3.34 kB
+dist/server/assets/centinela-api-CXn0Qiys.js                4.38 kB
+dist/server/assets/router-IszbWOvT.js                      10.54 kB
+dist/server/assets/simular-D5fygRLc.js                     13.74 kB
+dist/server/assets/index-D_z9dBUH.js                       17.03 kB
+dist/server/assets/predictivo-BCT6ol5y.js                  19.13 kB
+dist/server/assets/server-EMAqjAD4.js                      58.36 kB
+✓ built in 465ms

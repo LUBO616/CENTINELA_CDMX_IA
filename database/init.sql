@@ -126,6 +126,33 @@ CREATE INDEX IF NOT EXISTS idx_metrics_type ON analytics.metrics_cache(metric_ty
 CREATE INDEX IF NOT EXISTS idx_metrics_calculated_at ON analytics.metrics_cache(calculated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_metrics_expires_at ON analytics.metrics_cache(expires_at);
 
+-- Table: analytics.predictive_incidents
+-- Purpose: Store massive synthetic data for predictive analytics
+CREATE TABLE IF NOT EXISTS analytics.predictive_incidents (
+    id SERIAL PRIMARY KEY,
+    incident_id TEXT UNIQUE NOT NULL,
+    branch VARCHAR(20) NOT NULL CHECK (branch IN ('low', 'mid', 'critical')),
+    risk_level INTEGER NOT NULL CHECK (risk_level BETWEEN 1 AND 10),
+    case_category VARCHAR(50) NOT NULL,
+    human_required BOOLEAN DEFAULT FALSE,
+    p0_signals TEXT[],
+    alcaldia_norm VARCHAR(50),
+    synthetic BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    geom GEOMETRY(Point, 4326)
+);
+
+-- Indexes for analytics.predictive_incidents
+CREATE INDEX IF NOT EXISTS idx_predictive_incident_id ON analytics.predictive_incidents(incident_id);
+CREATE INDEX IF NOT EXISTS idx_predictive_created_at ON analytics.predictive_incidents(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_predictive_branch ON analytics.predictive_incidents(branch);
+CREATE INDEX IF NOT EXISTS idx_predictive_risk_level ON analytics.predictive_incidents(risk_level);
+CREATE INDEX IF NOT EXISTS idx_predictive_category ON analytics.predictive_incidents(case_category);
+CREATE INDEX IF NOT EXISTS idx_predictive_alcaldia ON analytics.predictive_incidents(alcaldia_norm);
+CREATE INDEX IF NOT EXISTS idx_predictive_human_required ON analytics.predictive_incidents(human_required);
+CREATE INDEX IF NOT EXISTS idx_predictive_synthetic ON analytics.predictive_incidents(synthetic);
+CREATE INDEX IF NOT EXISTS idx_predictive_geom ON analytics.predictive_incidents USING GIST(geom);
+
 -- ============================================================================
 -- VIEWS FOR ANALYTICS
 -- ============================================================================
@@ -203,6 +230,61 @@ BEGIN
     WHERE expires_at IS NOT NULL AND expires_at < NOW();
 END;
 $$ LANGUAGE plpgsql;
+
+-- Function: Notify predictive data changes for real-time updates
+CREATE OR REPLACE FUNCTION notify_predictive_change()
+RETURNS TRIGGER AS $$
+DECLARE
+    payload JSON;
+BEGIN
+    -- Build notification payload
+    IF TG_OP = 'DELETE' THEN
+        payload = json_build_object(
+            'operation', TG_OP,
+            'table', TG_TABLE_SCHEMA || '.' || TG_TABLE_NAME,
+            'incident_id', OLD.incident_id,
+            'created_at', OLD.created_at,
+            'timestamp', NOW()
+        );
+    ELSE
+        payload = json_build_object(
+            'operation', TG_OP,
+            'table', TG_TABLE_SCHEMA || '.' || TG_TABLE_NAME,
+            'incident_id', NEW.incident_id,
+            'branch', NEW.branch,
+            'risk_level', NEW.risk_level,
+            'case_category', NEW.case_category,
+            'created_at', NEW.created_at,
+            'timestamp', NOW()
+        );
+    END IF;
+    
+    -- Send notification
+    PERFORM pg_notify('predictive_updates', payload::text);
+    
+    IF TG_OP = 'DELETE' THEN
+        RETURN OLD;
+    ELSE
+        RETURN NEW;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Triggers for predictive incidents real-time notifications
+CREATE TRIGGER notify_predictive_insert
+    AFTER INSERT ON analytics.predictive_incidents
+    FOR EACH ROW
+    EXECUTE FUNCTION notify_predictive_change();
+
+CREATE TRIGGER notify_predictive_update
+    AFTER UPDATE ON analytics.predictive_incidents
+    FOR EACH ROW
+    EXECUTE FUNCTION notify_predictive_change();
+
+CREATE TRIGGER notify_predictive_delete
+    AFTER DELETE ON analytics.predictive_incidents
+    FOR EACH ROW
+    EXECUTE FUNCTION notify_predictive_change();
 
 -- ============================================================================
 -- INITIAL DATA / DEMO SETUP

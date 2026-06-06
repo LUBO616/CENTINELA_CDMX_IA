@@ -344,6 +344,108 @@ async def get_alcaldias_geojson():
         )
 
 
+# Predictive Analytics Endpoints
+@app.get("/predictive/overview")
+async def get_predictive_overview():
+    """Proxy para obtener overview predictivo"""
+    try:
+        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+            response = await client.get(f"{ANALYTICS_BASE_URL}/predictive/overview")
+            if response.status_code != 200:
+                raise HTTPException(status_code=response.status_code, detail=response.text)
+            return response.json()
+    except Exception as e:
+        logger.error(f"Error in /predictive/overview: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/predictive/hourly")
+async def get_predictive_hourly():
+    """Proxy para obtener distribución horaria predictiva"""
+    try:
+        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+            response = await client.get(f"{ANALYTICS_BASE_URL}/predictive/hourly")
+            if response.status_code != 200:
+                raise HTTPException(status_code=response.status_code, detail=response.text)
+            return response.json()
+    except Exception as e:
+        logger.error(f"Error in /predictive/hourly: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/predictive/categories")
+async def get_predictive_categories():
+    """Proxy para obtener distribución por categorías predictivas"""
+    try:
+        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+            response = await client.get(f"{ANALYTICS_BASE_URL}/predictive/categories")
+            if response.status_code != 200:
+                raise HTTPException(status_code=response.status_code, detail=response.text)
+            return response.json()
+    except Exception as e:
+        logger.error(f"Error in /predictive/categories: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/predictive/alcaldias")
+async def get_predictive_alcaldias():
+    """Proxy para obtener top alcaldías predictivas"""
+    try:
+        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+            response = await client.get(f"{ANALYTICS_BASE_URL}/predictive/alcaldias")
+            if response.status_code != 200:
+                raise HTTPException(status_code=response.status_code, detail=response.text)
+            return response.json()
+    except Exception as e:
+        logger.error(f"Error in /predictive/alcaldias: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/predictive/forecast")
+async def get_predictive_forecast():
+    """Proxy para obtener forecast predictivo"""
+    try:
+        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+            response = await client.get(f"{ANALYTICS_BASE_URL}/predictive/forecast")
+            if response.status_code != 200:
+                raise HTTPException(status_code=response.status_code, detail=response.text)
+            return response.json()
+    except Exception as e:
+        logger.error(f"Error in /predictive/forecast: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/predictive/events")
+async def predictive_events_sse():
+    """
+    Proxy SSE para eventos predictivos en tiempo real
+    Nota: SSE streaming puede ser complejo en proxy. Si hay problemas,
+    el frontend puede conectarse directamente a api-analytics:8003/predictive/events
+    """
+    from starlette.responses import StreamingResponse
+    
+    async def event_stream():
+        """Stream events from analytics service"""
+        try:
+            async with httpx.AsyncClient(timeout=None) as client:
+                async with client.stream("GET", f"{ANALYTICS_BASE_URL}/predictive/events") as response:
+                    async for chunk in response.aiter_bytes():
+                        yield chunk
+        except Exception as e:
+            logger.error(f"SSE proxy error: {str(e)}")
+            yield f"event: error\ndata: {{'error': '{str(e)}'}}\n\n".encode()
+    
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
+
+
 # Manejo global de errores
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):

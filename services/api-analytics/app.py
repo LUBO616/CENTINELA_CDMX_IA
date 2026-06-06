@@ -18,6 +18,17 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import logging
 
+def num(value, default=0.0):
+    """Convert DB numeric/Decimal/None values to native float."""
+    if value is None:
+        return default
+    try:
+        return float(value)
+    except Exception:
+        return default
+
+
+
 # Configure logging
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO"),
@@ -566,6 +577,416 @@ async def get_predictions():
     except Exception as e:
         logger.error(f"Error generating predictions: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/predictive/overview")
+async def get_predictive_overview():
+    """
+    Get overview statistics from massive predictive dataset
+    Returns aggregated metrics for predictive dashboard
+    """
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Total incidents
+        cursor.execute("SELECT COUNT(*) as count FROM analytics.predictive_incidents")
+        total_incidents = cursor.fetchone()['count']
+        
+        # Last 24h
+        cursor.execute("""
+            SELECT COUNT(*) as count
+            FROM analytics.predictive_incidents
+            WHERE created_at >= NOW() - INTERVAL '24 hours'
+        """)
+        last_24h = cursor.fetchone()['count']
+        
+        # Last 7d
+        cursor.execute("""
+            SELECT COUNT(*) as count
+            FROM analytics.predictive_incidents
+            WHERE created_at >= NOW() - INTERVAL '7 days'
+        """)
+        last_7d = cursor.fetchone()['count']
+        
+        # By branch
+        cursor.execute("""
+            SELECT
+                COUNT(*) FILTER (WHERE branch = 'critical') as critical_count,
+                COUNT(*) FILTER (WHERE branch = 'mid') as mid_count,
+                COUNT(*) FILTER (WHERE branch = 'low') as low_count
+            FROM analytics.predictive_incidents
+        """)
+        branch_counts = cursor.fetchone()
+        
+        # Human required
+        cursor.execute("""
+            SELECT COUNT(*) as count
+            FROM analytics.predictive_incidents
+            WHERE human_required = TRUE
+        """)
+        human_required_count = cursor.fetchone()['count']
+        
+        # P0 signals
+        cursor.execute("""
+            SELECT COUNT(*) as count
+            FROM analytics.predictive_incidents
+            WHERE p0_signals IS NOT NULL AND array_length(p0_signals, 1) > 0
+        """)
+        p0_count = cursor.fetchone()['count']
+        
+        cursor.close()
+        conn.close()
+        
+        return {
+            "total_incidents": total_incidents,
+            "last_24h": last_24h,
+            "last_7d": last_7d,
+            "critical_count": branch_counts['critical_count'],
+            "mid_count": branch_counts['mid_count'],
+            "low_count": branch_counts['low_count'],
+            "human_required_count": human_required_count,
+            "p0_count": p0_count,
+            "generated_at": datetime.utcnow().isoformat() + "Z"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting predictive overview: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/predictive/hourly")
+async def get_predictive_hourly():
+    """
+    Get hourly distribution of predictive incidents
+    Returns incident count and average risk by hour of day
+    """
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cursor.execute("""
+            SELECT
+                EXTRACT(HOUR FROM created_at)::INTEGER as hour,
+                COUNT(*) as incident_count,
+                ROUND(AVG(risk_level)::NUMERIC, 2) as avg_risk
+            FROM analytics.predictive_incidents
+            GROUP BY EXTRACT(HOUR FROM created_at)
+            ORDER BY hour
+        """)
+        
+        rows = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        # Fill in missing hours with 0
+        hourly_data = {i: {"hour": i, "incident_count": 0, "avg_risk": 0.0} for i in range(24)}
+        for row in rows:
+            hourly_data[row['hour']] = {
+                "hour": row['hour'],
+                "incident_count": row['incident_count'],
+                "avg_risk": float(row['avg_risk'])
+            }
+        
+        return {
+            "hourly_distribution": list(hourly_data.values()),
+            "generated_at": datetime.utcnow().isoformat() + "Z"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting predictive hourly: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/predictive/categories")
+async def get_predictive_categories():
+    """
+    Get distribution by category from predictive dataset
+    Returns incident count and metrics per category
+    """
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cursor.execute("""
+            SELECT
+                case_category,
+                COUNT(*) as incident_count,
+                ROUND(AVG(risk_level)::NUMERIC, 2) as avg_risk,
+                COUNT(*) FILTER (WHERE branch = 'critical') as critical_count,
+                COUNT(*) FILTER (WHERE human_required = TRUE) as human_required_count,
+                COUNT(*) FILTER (WHERE p0_signals IS NOT NULL AND array_length(p0_signals, 1) > 0) as p0_count
+            FROM analytics.predictive_incidents
+            GROUP BY case_category
+            ORDER BY incident_count DESC
+        """)
+        
+        rows = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        categories = []
+        for row in rows:
+            categories.append({
+                "category": row['case_category'],
+                "incident_count": row['incident_count'],
+                "avg_risk": float(row['avg_risk']),
+                "critical_count": row['critical_count'],
+                "human_required_count": row['human_required_count'],
+                "p0_count": row['p0_count']
+            })
+        
+        return {
+            "categories": categories,
+            "generated_at": datetime.utcnow().isoformat() + "Z"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting predictive categories: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/predictive/alcaldias")
+async def get_predictive_alcaldias():
+    """
+    Get top alcaldías by incident metrics from predictive dataset
+    Returns alcaldía statistics sorted by incident count
+    """
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cursor.execute("""
+            SELECT
+                alcaldia_norm,
+                COUNT(*) as incident_count,
+                ROUND(AVG(risk_level)::NUMERIC, 2) as avg_risk,
+                COUNT(*) FILTER (WHERE branch = 'critical') as critical_count,
+                COUNT(*) FILTER (WHERE p0_signals IS NOT NULL AND array_length(p0_signals, 1) > 0) as p0_count
+            FROM analytics.predictive_incidents
+            WHERE alcaldia_norm IS NOT NULL
+            GROUP BY alcaldia_norm
+            ORDER BY incident_count DESC
+            LIMIT 10
+        """)
+        
+        rows = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        alcaldias = []
+        for row in rows:
+            alcaldias.append({
+                "alcaldia": row['alcaldia_norm'],
+                "incident_count": row['incident_count'],
+                "avg_risk": float(row['avg_risk']),
+                "critical_count": row['critical_count'],
+                "p0_count": row['p0_count']
+            })
+        
+        return {
+            "alcaldias": alcaldias,
+            "generated_at": datetime.utcnow().isoformat() + "Z"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting predictive alcaldias: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/predictive/forecast")
+async def get_predictive_forecast():
+    """
+    Get predictive forecast based on historical patterns
+    Returns next hour/24h predictions and risk hotspots
+    """
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Get hourly average for current hour
+        current_hour = datetime.now().hour
+        cursor.execute("""
+            SELECT
+                ROUND(AVG(hourly_count)::NUMERIC, 0) as avg_hourly
+            FROM (
+                SELECT
+                    EXTRACT(HOUR FROM created_at) as hour,
+                    COUNT(*) as hourly_count
+                FROM analytics.predictive_incidents
+                WHERE EXTRACT(HOUR FROM created_at) = %s
+                GROUP BY DATE_TRUNC('day', created_at), EXTRACT(HOUR FROM created_at)
+            ) hourly_stats
+        """, (current_hour,))
+        
+        result = cursor.fetchone()
+        avg_hourly = int(result['avg_hourly']) if result['avg_hourly'] else 20
+        
+        # Calculate next hour prediction (with some variance)
+        next_hour_expected = int(avg_hourly * random.uniform(0.9, 1.1))
+        
+        # Calculate 24h prediction
+        cursor.execute("""
+            SELECT ROUND(AVG(daily_count)::NUMERIC, 0) as avg_daily
+            FROM (
+                SELECT
+                    DATE_TRUNC('day', created_at) as day,
+                    COUNT(*) as daily_count
+                FROM analytics.predictive_incidents
+                GROUP BY DATE_TRUNC('day', created_at)
+            ) daily_stats
+        """)
+        
+        result = cursor.fetchone()
+        avg_daily = int(result['avg_daily']) if result['avg_daily'] else 500
+        next_24h_expected = int(avg_daily * random.uniform(0.95, 1.05))
+        
+        # Determine trend (compare last 24h vs last 7d average)
+        cursor.execute("""
+            SELECT
+                COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '24 hours') as last_24h,
+                COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days') / 7.0 as avg_daily_7d
+            FROM analytics.predictive_incidents
+        """)
+        
+        trend_data = cursor.fetchone()
+        last_24h = int(trend_data['last_24h'] or 0)
+        avg_daily_7d = num(trend_data['avg_daily_7d'], 0.0)
+
+        if last_24h > avg_daily_7d:
+            trend = "increasing"
+        elif last_24h < avg_daily_7d * 0.9:
+            trend = "decreasing"
+        else:
+            trend = "stable"
+        
+        # Get risk hotspots (top alcaldías by risk)
+        cursor.execute("""
+            SELECT
+                alcaldia_norm,
+                ROUND(AVG(risk_level)::NUMERIC, 2) as avg_risk,
+                COUNT(*) as incident_count
+            FROM analytics.predictive_incidents
+            WHERE created_at >= NOW() - INTERVAL '24 hours'
+            AND alcaldia_norm IS NOT NULL
+            GROUP BY alcaldia_norm
+            HAVING AVG(risk_level) >= 6
+            ORDER BY avg_risk DESC
+            LIMIT 5
+        """)
+        
+        hotspot_rows = cursor.fetchall()
+        risk_hotspots = []
+        for row in hotspot_rows:
+            risk_hotspots.append({
+                "alcaldia": row['alcaldia_norm'],
+                "avg_risk": float(row['avg_risk']),
+                "incident_count": row['incident_count']
+            })
+        
+        # Calculate recommended staffing level
+        if next_hour_expected > 30:
+            staffing_level = "high"
+        elif next_hour_expected > 15:
+            staffing_level = "medium"
+        else:
+            staffing_level = "low"
+        
+        # Calculate confidence based on data volume
+        cursor.execute("SELECT COUNT(*) as count FROM analytics.predictive_incidents")
+        total_count = cursor.fetchone()['count']
+        confidence = min(0.95, 0.5 + (total_count / 10000) * 0.45)
+        
+        cursor.close()
+        conn.close()
+        
+        return {
+            "next_hour_expected_calls": next_hour_expected,
+            "next_24h_expected_calls": next_24h_expected,
+            "trend": trend,
+            "confidence": round(confidence, 2),
+            "risk_hotspots": risk_hotspots,
+            "recommended_staffing_level": staffing_level,
+            "generated_at": datetime.utcnow().isoformat() + "Z"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting predictive forecast: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/predictive/events")
+async def predictive_events_sse():
+    """
+    Server-Sent Events endpoint for real-time predictive updates
+    Listens to PostgreSQL NOTIFY channel and streams events to clients
+    """
+    from fastapi.responses import StreamingResponse
+    import asyncio
+    import select
+    
+    async def event_generator():
+        """Generate SSE events from PostgreSQL NOTIFY"""
+        conn = None
+        try:
+            # Connect to database
+            conn = get_db_connection()
+            conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
+            cursor = conn.cursor()
+            
+            # Listen to predictive_updates channel
+            cursor.execute("LISTEN predictive_updates;")
+            logger.info("SSE: Listening to predictive_updates channel")
+            
+            # Send initial connection event
+            yield f"event: connected\ndata: {json.dumps({'status': 'connected', 'timestamp': datetime.utcnow().isoformat() + 'Z'})}\n\n"
+            
+            # Heartbeat counter
+            heartbeat_counter = 0
+            
+            while True:
+                # Check for notifications with timeout
+                if select.select([conn], [], [], 15.0) == ([], [], []):
+                    # Timeout - send heartbeat
+                    heartbeat_counter += 1
+                    yield f"event: heartbeat\ndata: {json.dumps({'count': heartbeat_counter, 'timestamp': datetime.utcnow().isoformat() + 'Z'})}\n\n"
+                else:
+                    # Process notifications
+                    conn.poll()
+                    while conn.notifies:
+                        notify = conn.notifies.pop(0)
+                        payload = json.loads(notify.payload)
+                        
+                        logger.info(f"SSE: Received notification - {payload.get('operation')} on {payload.get('incident_id')}")
+                        
+                        # Send event to client
+                        yield f"event: predictive_update\ndata: {json.dumps(payload)}\n\n"
+                
+                # Small async sleep to prevent blocking
+                await asyncio.sleep(0.1)
+                
+        except Exception as e:
+            logger.error(f"SSE error: {e}")
+            yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
+        finally:
+            if conn:
+                try:
+                    cursor.execute("UNLISTEN predictive_updates;")
+                    cursor.close()
+                    conn.close()
+                    logger.info("SSE: Connection closed")
+                except:
+                    pass
+    
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
 
 
 @app.get("/judge/metrics/postgis")
