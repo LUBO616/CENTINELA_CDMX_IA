@@ -155,3 +155,6 @@ lovable-dashboard/.env.local
 # Local editor/runtime files
 node_modules/
 lovable-dashboard/node_modules/
+*.bak
+*.bak2
+*_backup*
