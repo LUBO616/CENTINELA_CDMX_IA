@@ -1,0 +1,47 @@
+{
+  "hours_saved": {
+    "total_calls": 500,
+    "automated_calls": 145,
+    "automation_rate": 0.29,
+    "minutes_saved": 435.0,
+    "hours_saved": 7.25,
+    "cost_saved_mxn": 1450.0,
+    "min_per_false_call": 3.0
+  },
+  "p0_recall": {
+    "true_positives": 30,
+    "false_negatives": 107,
+    "total_p0_signals": 137,
+    "recall": 0.219,
+    "precision": 0.2239,
+    "meets_threshold": false,
+    "threshold": 0.95
+  },
+  "territorial_equity": {
+    "gini_coefficient": NaN,
+    "meets_threshold": false,
+    "threshold": 0.35,
+    "interpretation": "Menor Gini = Mayor equidad territorial",
+    "alcaldias_analyzed": 16,
+    "calls_per_100k_stats": {
+      "mean": NaN,
+      "std": NaN,
+      "min": NaN,
+      "max": NaN
+    }
+  },
+  "digital_bias": {
+    "correlation_coefficient": -0.0791,
+    "abs_correlation": 0.0791,
+    "meets_threshold": true,
+    "threshold": 0.2,
+    "interpretation": "Baja correlación = Sistema accesible sin sesgo digital",
+    "alcaldias_analyzed": 13,
+    "digital_access_stats": {
+      "mean": 0.6838,
+      "std": 0.1553,
+      "min": 0.45,
+      "max": 0.91
+    }
+  }
+}

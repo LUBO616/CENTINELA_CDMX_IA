@@ -1,0 +1,12 @@
+{
+  "min_por_llamada_falsa_high": 3.0,
+  "recall_p0_umbral": 0.95,
+  "gini_umbral_exito": 0.35,
+  "corr_digital_umbral": 0.20,
+  "_metadata": {
+    "min_por_llamada_falsa_high_fuente": "NENA 2023 + reportes operativos C5 CDMX — datos.cdmx.gob.mx",
+    "recall_p0_umbral_fuente": "Umbral clínico de sensibilidad mínima aceptable en clasificación de emergencias críticas",
+    "gini_umbral_exito_fuente": "OCDE Regional Outlook — equidad territorial significativa",
+    "corr_digital_umbral_fuente": "INEGI Censo 2020 — VPH_INTERNET / TVIVPARHAB por alcaldía CDMX"
+  }
+}
