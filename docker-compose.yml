@@ -160,6 +160,8 @@ services:
   # --------------------------------------------------------------------------
   # API Gateway Service (Port 8010)
   # --------------------------------------------------------------------------
+    volumes:
+      - ./evidence:/app/evidence:ro
   api-gateway:
     profiles: ["services"]
     build:

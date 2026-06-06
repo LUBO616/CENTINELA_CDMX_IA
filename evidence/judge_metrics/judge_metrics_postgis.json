@@ -1,0 +1,187 @@
+{
+  "status": "generated",
+  "synthetic_data": true,
+  "disclaimer": "Datos geoespaciales sintéticos para demo. No representan límites oficiales ni incidentes reales.",
+  "generated_at": "2026-06-06T09:14:13.020101",
+  "thresholds": {
+    "gini_umbral_exito": 0.35,
+    "gini_umbral_alerta": 0.45,
+    "recall_p0_umbral": 0.95,
+    "corr_digital_umbral": 0.2,
+    "min_por_llamada_falsa_high": 8,
+    "min_por_llamada_falsa_low": 3,
+    "operator_hours_freed_threshold": 2.0
+  },
+  "metrics": {
+    "gini_risk_norm": {
+      "value": 0.2626,
+      "threshold": 0.35,
+      "pass": true,
+      "description": "Gini coefficient for territorial equity (lower is better)"
+    },
+    "recall_p0_detection_rate": {
+      "value": 1.0,
+      "threshold": 0.95,
+      "pass": true,
+      "description": "P0 signal detection rate in critical incidents (synthetic metric)"
+    },
+    "operator_hours_freed_per_day": {
+      "value": 11.47,
+      "threshold": 2.0,
+      "pass": true,
+      "description": "Operator hours freed per day through automation"
+    },
+    "coverage_bias_correlation_after": {
+      "value": 0.0777,
+      "threshold": 0.2,
+      "pass": true,
+      "description": "Correlation between digital access and incident count (lower is better)"
+    }
+  },
+  "by_alcaldia": [
+    {
+      "alcaldia": "Álvaro Obregón",
+      "alcaldia_norm": "alvaro_obregon",
+      "incident_count": 10,
+      "avg_risk": 4.0,
+      "p0_count": 3,
+      "digital_access_index": 0.68,
+      "percentile": 1
+    },
+    {
+      "alcaldia": "Azcapotzalco",
+      "alcaldia_norm": "azcapotzalco",
+      "incident_count": 10,
+      "avg_risk": 3.0,
+      "p0_count": 1,
+      "digital_access_index": 0.72,
+      "percentile": 1
+    },
+    {
+      "alcaldia": "Benito Juárez",
+      "alcaldia_norm": "benito_juarez",
+      "incident_count": 3,
+      "avg_risk": 1.0,
+      "p0_count": 0,
+      "digital_access_index": 0.89,
+      "percentile": 1
+    },
+    {
+      "alcaldia": "Coyoacán",
+      "alcaldia_norm": "coyoacan",
+      "incident_count": 18,
+      "avg_risk": 4.11,
+      "p0_count": 3,
+      "digital_access_index": 0.85,
+      "percentile": 1
+    },
+    {
+      "alcaldia": "Cuajimalpa de Morelos",
+      "alcaldia_norm": "cuajimalpa",
+      "incident_count": 10,
+      "avg_risk": 4.9,
+      "p0_count": 3,
+      "digital_access_index": 0.78,
+      "percentile": 1
+    },
+    {
+      "alcaldia": "Cuauhtémoc",
+      "alcaldia_norm": "cuauhtemoc",
+      "incident_count": 13,
+      "avg_risk": 3.69,
+      "p0_count": 2,
+      "digital_access_index": 0.82,
+      "percentile": 1
+    },
+    {
+      "alcaldia": "Gustavo A. Madero",
+      "alcaldia_norm": "gustavo_a_madero",
+      "incident_count": 10,
+      "avg_risk": 1.8,
+      "p0_count": 0,
+      "digital_access_index": 0.61,
+      "percentile": 0
+    },
+    {
+      "alcaldia": "Iztacalco",
+      "alcaldia_norm": "iztacalco",
+      "incident_count": 11,
+      "avg_risk": 4.0,
+      "p0_count": 3,
+      "digital_access_index": 0.65,
+      "percentile": 1
+    },
+    {
+      "alcaldia": "Iztapalapa",
+      "alcaldia_norm": "iztapalapa",
+      "incident_count": 10,
+      "avg_risk": 3.3,
+      "p0_count": 1,
+      "digital_access_index": 0.52,
+      "percentile": 0
+    },
+    {
+      "alcaldia": "La Magdalena Contreras",
+      "alcaldia_norm": "magdalena_contreras",
+      "incident_count": 10,
+      "avg_risk": 2.2,
+      "p0_count": 0,
+      "digital_access_index": 0.58,
+      "percentile": 0
+    },
+    {
+      "alcaldia": "Miguel Hidalgo",
+      "alcaldia_norm": "miguel_hidalgo",
+      "incident_count": 10,
+      "avg_risk": 2.2,
+      "p0_count": 0,
+      "digital_access_index": 0.91,
+      "percentile": 1
+    },
+    {
+      "alcaldia": "Milpa Alta",
+      "alcaldia_norm": "milpa_alta",
+      "incident_count": 10,
+      "avg_risk": 3.0,
+      "p0_count": 1,
+      "digital_access_index": 0.45,
+      "percentile": 0
+    },
+    {
+      "alcaldia": "Tláhuac",
+      "alcaldia_norm": "tlahuac",
+      "incident_count": 10,
+      "avg_risk": 4.7,
+      "p0_count": 4,
+      "digital_access_index": 0.48,
+      "percentile": 0
+    },
+    {
+      "alcaldia": "Tlalpan",
+      "alcaldia_norm": "tlalpan",
+      "incident_count": 10,
+      "avg_risk": 3.0,
+      "p0_count": 1,
+      "digital_access_index": 0.74,
+      "percentile": 1
+    },
+    {
+      "alcaldia": "Venustiano Carranza",
+      "alcaldia_norm": "venustiano_carranza",
+      "incident_count": 5,
+      "avg_risk": 3.2,
+      "p0_count": 1,
+      "digital_access_index": 0.63,
+      "percentile": 0
+    },
+    {
+      "alcaldia": "Xochimilco",
+      "alcaldia_norm": "xochimilco",
+      "incident_count": 10,
+      "avg_risk": 3.3,
+      "p0_count": 1,
+      "digital_access_index": 0.55,
+      "percentile": 0
+    }
+  ]
+}

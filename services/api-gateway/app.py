@@ -256,6 +256,94 @@ async def get_analytics_predictions():
         )
 
 
+# Endpoint: GET /judge/metrics/postgis
+@app.get("/judge/metrics/postgis")
+async def get_judge_metrics_postgis():
+    """
+    Proxy para obtener métricas PostGIS para jueces.
+    Reenvía a api-analytics:8003/judge/metrics/postgis
+    """
+    try:
+        logger.info("Fetching judge metrics (PostGIS)")
+        
+        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+            response = await client.get(f"{ANALYTICS_BASE_URL}/judge/metrics/postgis")
+            
+            if response.status_code != 200:
+                logger.error(f"api-analytics returned status {response.status_code}")
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=f"Analytics API error: {response.text}"
+                )
+            
+            result = response.json()
+            logger.info("Judge metrics fetched successfully")
+            return result
+            
+    except httpx.TimeoutException:
+        logger.error("Timeout calling api-analytics")
+        raise HTTPException(
+            status_code=504,
+            detail="Gateway timeout: api-analytics did not respond in time"
+        )
+    except httpx.RequestError as e:
+        logger.error(f"Network error calling api-analytics: {str(e)}")
+        raise HTTPException(
+            status_code=502,
+            detail=f"Gateway error: Could not reach api-analytics ({str(e)})"
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error in /judge/metrics/postgis: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal gateway error: {str(e)}"
+        )
+
+
+# Endpoint: GET /judge/geo/alcaldias
+@app.get("/judge/geo/alcaldias")
+async def get_alcaldias_geojson():
+    """
+    Proxy para obtener alcaldías como GeoJSON.
+    Reenvía a api-analytics:8003/judge/geo/alcaldias
+    """
+    try:
+        logger.info("Fetching alcaldías GeoJSON")
+        
+        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+            response = await client.get(f"{ANALYTICS_BASE_URL}/judge/geo/alcaldias")
+            
+            if response.status_code != 200:
+                logger.error(f"api-analytics returned status {response.status_code}")
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail=f"Analytics API error: {response.text}"
+                )
+            
+            result = response.json()
+            logger.info(f"Alcaldías GeoJSON fetched successfully ({result.get('metadata', {}).get('feature_count', 0)} features)")
+            return result
+            
+    except httpx.TimeoutException:
+        logger.error("Timeout calling api-analytics")
+        raise HTTPException(
+            status_code=504,
+            detail="Gateway timeout: api-analytics did not respond in time"
+        )
+    except httpx.RequestError as e:
+        logger.error(f"Network error calling api-analytics: {str(e)}")
+        raise HTTPException(
+            status_code=502,
+            detail=f"Gateway error: Could not reach api-analytics ({str(e)})"
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error in /judge/geo/alcaldias: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal gateway error: {str(e)}"
+        )
+
+
 # Manejo global de errores
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):

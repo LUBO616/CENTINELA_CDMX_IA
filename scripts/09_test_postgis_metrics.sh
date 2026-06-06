@@ -34,6 +34,10 @@ NC='\033[0m' # No Color
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
+# Script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
 # Load environment variables
 if [ -f "$PROJECT_ROOT/.env" ]; then
     export $(grep -v '^#' "$PROJECT_ROOT/.env" | xargs)
@@ -242,6 +246,97 @@ echo ""
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${BLUE}Test 7: Existing Endpoints Still Work${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+
+# ============================================================================
+# Test 8: Judge Metrics File Exists
+# ============================================================================
+
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BLUE}Test 8: Judge Metrics File Exists${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
+
+if [ -f "$PROJECT_ROOT/evidence/judge_metrics/judge_metrics_postgis.json" ]; then
+    test_pass "Judge metrics file exists"
+    
+    # Check if it's valid JSON
+    if jq empty "$PROJECT_ROOT/evidence/judge_metrics/judge_metrics_postgis.json" 2>/dev/null; then
+        test_pass "Judge metrics file is valid JSON"
+    else
+        test_fail "Judge metrics file is not valid JSON"
+    fi
+else
+    test_fail "Judge metrics file not found"
+fi
+
+echo ""
+
+# ============================================================================
+# Test 9: Judge Metrics Endpoint
+# ============================================================================
+
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BLUE}Test 9: Judge Metrics Endpoint${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
+
+JUDGE_METRICS_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8010/judge/metrics/postgis 2>/dev/null || echo "000")
+if [ "$JUDGE_METRICS_STATUS" = "200" ]; then
+    test_pass "Judge metrics endpoint responds (200)"
+    
+    # Check if response contains "status": "generated"
+    JUDGE_METRICS_RESPONSE=$(curl -s http://localhost:8010/judge/metrics/postgis 2>/dev/null)
+    if echo "$JUDGE_METRICS_RESPONSE" | jq -e '.status == "generated"' > /dev/null 2>&1; then
+        test_pass "Judge metrics status is 'generated'"
+    else
+        test_fail "Judge metrics status is not 'generated'"
+    fi
+    
+    # Check if response contains metrics
+    if echo "$JUDGE_METRICS_RESPONSE" | jq -e '.metrics' > /dev/null 2>&1; then
+        test_pass "Judge metrics contains 'metrics' object"
+    else
+        test_fail "Judge metrics missing 'metrics' object"
+    fi
+else
+    test_fail "Judge metrics endpoint failed (HTTP $JUDGE_METRICS_STATUS)"
+fi
+
+echo ""
+
+# ============================================================================
+# Test 10: Alcaldías GeoJSON Endpoint
+# ============================================================================
+
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BLUE}Test 10: Alcaldías GeoJSON Endpoint${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
+
+GEO_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8010/judge/geo/alcaldias 2>/dev/null || echo "000")
+if [ "$GEO_STATUS" = "200" ]; then
+    test_pass "Alcaldías GeoJSON endpoint responds (200)"
+    
+    # Check if response is FeatureCollection
+    GEO_RESPONSE=$(curl -s http://localhost:8010/judge/geo/alcaldias 2>/dev/null)
+    if echo "$GEO_RESPONSE" | jq -e '.type == "FeatureCollection"' > /dev/null 2>&1; then
+        test_pass "Response is a FeatureCollection"
+    else
+        test_fail "Response is not a FeatureCollection"
+    fi
+    
+    # Check feature count
+    FEATURE_COUNT=$(echo "$GEO_RESPONSE" | jq -r '.features | length' 2>/dev/null || echo "0")
+    if [ "$FEATURE_COUNT" = "16" ]; then
+        test_pass "FeatureCollection has 16 features"
+    else
+        test_fail "FeatureCollection has $FEATURE_COUNT features (expected 16)"
+    fi
+else
+    test_fail "Alcaldías GeoJSON endpoint failed (HTTP $GEO_STATUS)"
+fi
+
+echo ""
 echo ""
 
 # Test gateway health

@@ -67,6 +67,11 @@ if [ ! -f "$PROJECT_ROOT/tools/load_postgis_demo_data.py" ]; then
     exit 1
 fi
 
+if [ ! -f "$PROJECT_ROOT/tools/generate_judge_metrics_postgis.py" ]; then
+    echo -e "${RED}❌ Error: tools/generate_judge_metrics_postgis.py not found${NC}"
+    exit 1
+fi
+
 # Check if .env exists
 if [ ! -f "$PROJECT_ROOT/.env" ]; then
     echo -e "${RED}❌ Error: .env file not found${NC}"
@@ -133,7 +138,7 @@ echo ""
 # ============================================================================
 
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BLUE}Step 3/3: Load Data into PostGIS${NC}"
+echo -e "${BLUE}Step 3/4: Load Data into PostGIS${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 
@@ -143,6 +148,26 @@ if python3 tools/load_postgis_demo_data.py; then
 else
     echo ""
     echo -e "${RED}❌ Failed to load data into PostGIS${NC}"
+    exit 1
+fi
+
+echo ""
+
+# ============================================================================
+# Step 4: Generate Judge Metrics
+# ============================================================================
+
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BLUE}Step 4/4: Generate Judge Metrics${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
+
+if python3 tools/generate_judge_metrics_postgis.py; then
+    echo ""
+    echo -e "${GREEN}✅ Judge metrics generated successfully${NC}"
+else
+    echo ""
+    echo -e "${RED}❌ Failed to generate judge metrics${NC}"
     exit 1
 fi
 
@@ -159,6 +184,7 @@ echo ""
 echo "📊 Generated files:"
 echo "   - data/geo/alcaldias_cdmx_synthetic.geojson"
 echo "   - data/demo/incidentes_demo_geocoded.csv"
+echo "   - evidence/judge_metrics/judge_metrics_postgis.json"
 echo ""
 echo "🗄️  PostGIS tables populated:"
 echo "   - geo.alcaldias_geom (16 alcaldías)"
@@ -168,9 +194,16 @@ echo ""
 echo "🔗 Spatial join performed:"
 echo "   - All incidents assigned to alcaldías via ST_Contains"
 echo ""
+echo "📈 Judge metrics calculated:"
+echo "   - Gini coefficient (territorial equity)"
+echo "   - P0 detection recall rate"
+echo "   - Coverage bias correlation"
+echo "   - Operator hours freed per day"
+echo ""
 echo "🎯 Next steps:"
 echo "   1. Validate: ./scripts/09_test_postgis_metrics.sh"
-echo "   2. Generate metrics: python3 tools/generate_judge_metrics_postgis.py"
+echo "   2. View metrics: curl http://localhost:8010/judge/metrics/postgis | jq"
+echo "   3. View GeoJSON: curl http://localhost:8010/judge/geo/alcaldias | jq"
 echo ""
 echo -e "${YELLOW}⚠️  REMINDER: All data is SYNTHETIC for demo purposes only${NC}"
 echo ""

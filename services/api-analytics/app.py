@@ -6,8 +6,10 @@ Stores incidents, calculates metrics, and generates mock predictions
 import os
 import uuid
 import random
+import json
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -563,6 +565,106 @@ async def get_predictions():
         
     except Exception as e:
         logger.error(f"Error generating predictions: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/judge/metrics/postgis")
+async def get_judge_metrics_postgis():
+    """
+    Get judge metrics calculated from PostGIS data
+    Returns metrics for hackathon judges demonstrating territorial equity
+    """
+    try:
+        metrics_file = Path("evidence/judge_metrics/judge_metrics_postgis.json")
+        
+        if not metrics_file.exists():
+            return {
+                "status": "not_generated",
+                "message": "Run scripts/08_setup_postgis_demo.sh first",
+                "hint": "PostGIS metrics need to be generated before they can be retrieved"
+            }
+        
+        with open(metrics_file, "r") as f:
+            metrics = json.load(f)
+        
+        logger.info("Judge metrics retrieved successfully")
+        return metrics
+        
+    except Exception as e:
+        logger.error(f"Error retrieving judge metrics: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/judge/geo/alcaldias")
+async def get_alcaldias_geojson():
+    """
+    Get alcaldías as GeoJSON FeatureCollection with incident statistics
+    Returns synthetic geographic boundaries with metrics for visualization
+    """
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        
+        # Get alcaldías with geometry and statistics
+        cursor.execute("""
+            SELECT 
+                a.alcaldia,
+                a.alcaldia_norm,
+                ST_AsGeoJSON(a.geom) as geometry,
+                a.synthetic,
+                COUNT(p.id) AS incident_count,
+                COALESCE(AVG(p.risk_level), 0) AS avg_risk,
+                COUNT(CASE WHEN p.p0_signals IS NOT NULL AND p.p0_signals != '' THEN 1 END) AS p0_count,
+                d.digital_access_index,
+                d.percentile
+            FROM geo.alcaldias_geom a
+            LEFT JOIN geo.synthetic_incident_points p ON p.alcaldia_joined = a.alcaldia_norm
+            LEFT JOIN economia.digital_access_alcaldia d ON d.alcaldia_norm = a.alcaldia_norm
+            GROUP BY a.id, a.alcaldia, a.alcaldia_norm, a.geom, a.synthetic, d.digital_access_index, d.percentile
+            ORDER BY a.alcaldia_norm
+        """)
+        
+        rows = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        # Build GeoJSON FeatureCollection
+        features = []
+        for row in rows:
+            geometry = json.loads(row['geometry'])
+            
+            feature = {
+                "type": "Feature",
+                "geometry": geometry,
+                "properties": {
+                    "alcaldia": row['alcaldia'],
+                    "alcaldia_norm": row['alcaldia_norm'],
+                    "synthetic": row['synthetic'],
+                    "incident_count": int(row['incident_count']),
+                    "avg_risk": round(float(row['avg_risk']), 2),
+                    "p0_count": int(row['p0_count']),
+                    "digital_access_index": float(row['digital_access_index']) if row['digital_access_index'] else 0.0,
+                    "percentile": int(row['percentile']) if row['percentile'] else 0
+                }
+            }
+            features.append(feature)
+        
+        geojson = {
+            "type": "FeatureCollection",
+            "features": features,
+            "metadata": {
+                "disclaimer": "Datos geoespaciales sintéticos para demo. No representan límites oficiales.",
+                "synthetic_data": True,
+                "generated_at": datetime.utcnow().isoformat() + "Z",
+                "feature_count": len(features)
+            }
+        }
+        
+        logger.info(f"GeoJSON retrieved: {len(features)} alcaldías")
+        return geojson
+        
+    except Exception as e:
+        logger.error(f"Error retrieving GeoJSON: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
