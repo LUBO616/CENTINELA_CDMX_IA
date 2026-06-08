@@ -1,686 +1,229 @@
-# Ciberseguridad - 911 AI Flow Demo
+# Ciberseguridad — CENTINELA_CDMX_IA
 
-## Aviso Importante
-
-**Este es un MVP educativo con controles de seguridad básicos. NO está listo para producción.**
-
-- ⚠️ No usar con datos reales
-- ⚠️ No exponer a internet
-- ⚠️ No usar en entorno de producción sin auditoría completa
+> Documento técnico · Versión 1.0 · Junio 2026
 
 ---
 
-## Tabla de Contenidos
+## Contexto del threat model
 
-1. [Threat Model](#threat-model)
-2. [Activos Protegidos](#activos-protegidos)
-3. [Superficie de Ataque](#superficie-de-ataque)
-4. [Riesgos Principales](#riesgos-principales)
-5. [Controles Implementados](#controles-implementados)
-6. [Checklist Previo a Demo](#checklist-previo-a-demo)
-7. [Limitaciones de Seguridad](#limitaciones-de-seguridad)
-8. [Recomendaciones para Producción](#recomendaciones-para-producción)
+CENTINELA opera en un entorno de alto riesgo: procesa información de emergencias activas en tiempo real, tiene acceso a transcripciones de llamadas del 911, y sus decisiones de clasificación tienen consecuencias directas sobre la seguridad y la vida de las personas.
+
+Los vectores de ataque relevantes para este sistema no son los mismos que para una aplicación empresarial estándar. Los atacantes pueden tener motivaciones específicas para degradar o manipular la respuesta de emergencia de una ciudad.
 
 ---
 
-## Threat Model
+## Modelo de amenazas
 
-### Modelo de Amenazas Básico
+### Amenazas críticas
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Actores de Amenaza                        │
-├─────────────────────────────────────────────────────────────┤
-│ 1. Atacante Externo (Internet)                              │
-│    - Objetivo: Acceso no autorizado, exfiltración de datos  │
-│    - Mitigación: Servicios en 127.0.0.1, no expuestos       │
-│                                                              │
-│ 2. Usuario Malicioso Local                                  │
-│    - Objetivo: Inyección de código, DoS, acceso a DB        │
-│    - Mitigación: Validación de inputs, rate limiting        │
-│                                                              │
-│ 3. Insider Threat (Acceso al Host)                          │
-│    - Objetivo: Acceso a .env, DB, logs                      │
-│    - Mitigación: .env fuera de git, permisos restrictivos   │
-│                                                              │
-│ 4. Fuga de Información                                      │
-│    - Objetivo: Exposición de PII en logs, analytics         │
-│    - Mitigación: Redacción automática, normalización        │
-└─────────────────────────────────────────────────────────────┘
-```
+#### 1. Ataques deepfake de voz al canal 911
 
-### Escenarios de Ataque
+**Descripción:** Generación masiva de llamadas falsas con voz sintética para saturar el sistema, obtener respuesta de emergencia para eventos inexistentes, o probar los umbrales del sistema.
 
-#### Escenario 1: Inyección SQL
-**Amenaza:** Atacante envía payload malicioso en transcript
-```json
-{
-  "transcript": "'; DROP TABLE raw.conversations; --"
-}
-```
-**Mitigación:**
-- ✅ Uso de prepared statements (psycopg2)
-- ✅ Validación de inputs con Pydantic
-- ✅ Sanitización de strings
+**Por qué es relevante ahora:** Los modelos de síntesis de voz han alcanzado un nivel de realismo que los hace indistinguibles para el oído humano bajo presión. El canal 911 es un objetivo de alto impacto para actores que buscan saturar recursos de seguridad pública.
 
-#### Escenario 2: Exfiltración de PII
-**Amenaza:** Atacante accede a logs o analytics para obtener PII
-**Mitigación:**
-- ✅ Redacción automática antes de almacenar
-- ✅ Logs sin PII
-- ✅ Normalización de ubicaciones
-- ✅ No guardar transcript original
+**Control implementado:** A3 Centinela usa la arquitectura wav2vec2/WavLM → AASIST3, una red neuronal de audio diseñada específicamente para detectar voz sintética. La detección produce una bandera para el operador — nunca un descarte automático.
 
-#### Escenario 3: Denegación de Servicio (DoS)
-**Amenaza:** Atacante envía miles de requests para saturar sistema
-**Mitigación:**
-- ⚠️ Rate limiting básico (futuro)
-- ✅ Timeouts configurados
-- ✅ Recursos limitados por Docker
+**Guarda crítica:** El umbral está calibrado con FNR bajo (baja tasa de falsos negativos) porque el costo de una llamada real clasificada como sintética es irreversible. Es preferible un falso positivo que un falso negativo.
 
-#### Escenario 4: Acceso No Autorizado a n8n
-**Amenaza:** Atacante accede a n8n sin credenciales
-**Mitigación:**
-- ✅ Basic Auth habilitado
-- ✅ Puerto en 127.0.0.1
-- ⚠️ Credenciales por defecto (cambiar en producción)
+#### 2. Inundación coordinada de llamadas duplicadas
+
+**Descripción:** Múltiples llamadas coordinadas sobre el mismo evento inexistente, diseñadas para saturar al operador y hacer que recursos de emergencia sean enviados a una ubicación falsa.
+
+**Control implementado:** A2 Correlador detecta patrones geo-temporales de llamadas al mismo evento, correlaciona por motivo + ubicación + ventana temporal, y detecta comportamiento de inundación coordinada.
+
+#### 3. Manipulación del nivel de riesgo asignado
+
+**Descripción:** Cualquier vector que intente hacer que el sistema clasifique una emergencia real con un nivel de riesgo bajo, haciendo que el operador la atienda con menor urgencia.
+
+**Control implementado:** Las señales P0 tienen precedencia técnica absoluta sobre cualquier otro factor. Ningún agente — incluyendo A2 y A3 — puede reducir el nivel de riesgo cuando hay señales críticas activas. Esta restricción está implementada como condición de código, no como parámetro configurable.
+
+#### 4. Exfiltración de datos personales
+
+**Descripción:** Acceso no autorizado a transcripciones de llamadas de emergencia que contienen información médica, de ubicación, de violencia familiar, o datos de víctimas.
+
+**Control implementado:** Redacción automática de PII en A1 como primera operación del sistema. La transcripción redactada es la única versión que persiste en la cadena de procesamiento. Cero PII en logs, bus de mensajería y salidas de agentes — regla técnica sin excepciones.
+
+#### 5. Fallo en cascada de agentes críticos
+
+**Descripción:** Fallo de uno o más agentes que provoque que el sistema proporcione información incorrecta al operador en un momento crítico, o que deje de proporcionar asistencia cuando más se necesita.
+
+**Control implementado:** A7 Bravo monitorea el estado de A1–A6 y escala automáticamente al operador humano ante cualquier fallo de agente, sin degradación del servicio de emergencia. El sistema falla de forma segura: en caso de duda, el operador recibe control completo.
 
 ---
 
-## Activos Protegidos
+### Amenazas medias
 
-### Clasificación de Activos
-
-| Activo | Criticidad | Ubicación | Protección |
-|--------|-----------|-----------|------------|
-| **Transcripts redactados** | Alta | PostgreSQL raw.conversations | Redacción automática |
-| **Resultados de triage** | Media | PostgreSQL core.triage_results | Separación de schemas |
-| **Métricas agregadas** | Baja | PostgreSQL analytics.incidents | Normalización de ubicaciones |
-| **Credenciales DB** | Crítica | .env (no en git) | .gitignore, permisos 600 |
-| **Credenciales n8n** | Alta | .env (no en git) | .gitignore, Basic Auth |
-| **Código fuente** | Media | Git repository | Público (sin secretos) |
-| **Logs** | Media | Docker logs | Sin PII, rotación |
-
-### Datos Sensibles
-
-**PII que se redacta:**
-- Teléfonos
-- Emails
-- Nombres propios
-- Direcciones con número
-
-**Datos que NO se almacenan:**
-- ❌ Transcript original sin redactar
-- ❌ Audio de llamadas
-- ❌ Datos biométricos
-- ❌ Identificadores oficiales (CURP, INE)
+| Amenaza | Descripción | Control |
+|---|---|---|
+| Uso discriminatorio de categorías protegidas | Manipulación del sistema para que categorías de protección reforzada sean usadas para perfilar o discriminar en lugar de proteger | Categorías técnicamente bloqueadas para reducir prioridad · A8 Auditor verifica semanalmente |
+| Envenenamiento del modelo AASIST3 | Introducción de datos de entrenamiento contaminados para degradar la capacidad de detección | Distribución de entrenamiento declarada públicamente y versión fijada · monitoreo de tasas de error en producción |
+| Inyección en el flujo de transcripción | Intentos de inyectar instrucciones o datos maliciosos a través del audio de la llamada | Instrucciones del sistema no expuestas al usuario final · entradas validadas estructuralmente antes de alcanzar el LLM |
 
 ---
 
-## Superficie de Ataque
+## Controles de seguridad por capa
 
-### Puntos de Entrada
+### Capa de datos
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Superficie de Ataque                      │
-├─────────────────────────────────────────────────────────────┤
-│ 1. Webhook n8n                                              │
-│    - URL: http://localhost:5678/webhook/911-call            │
-│    - Método: POST                                            │
-│    - Autenticación: Basic Auth                               │
-│    - Validación: Payload JSON                                │
-│                                                              │
-│ 2. API Endpoints                                             │
-│    - api-ingest:8001 (POST /raw-conversations)              │
-│    - api-triage:8002 (POST /triage)                         │
-│    - api-analytics:8003 (POST /incidents, GET /analytics/*) │
-│    - Autenticación: Ninguna (localhost only)                 │
-│    - Validación: Pydantic models                             │
-│                                                              │
-│ 3. PostgreSQL                                                │
-│    - Puerto: 5432 (127.0.0.1)                               │
-│    - Autenticación: Usuario/contraseña                       │
-│    - Acceso: Solo desde Docker network                       │
-│                                                              │
-│ 4. Docker Host                                               │
-│    - Acceso físico/SSH al servidor                           │
-│    - Archivos: .env, docker-compose.yml                      │
-│    - Comandos: docker exec, docker logs                      │
-└─────────────────────────────────────────────────────────────┘
-```
+| Control | Implementación |
+|---|---|
+| Redacción de PII | Primera operación del sistema en A1 · antes de cualquier procesamiento posterior |
+| Separación de esquemas | `raw` (transcripciones redactadas) · `core` (resultados de triage) · `analytics` (métricas) · PII nunca cruza la frontera de `raw` |
+| Cero PII en bus | Regla técnica absoluta en Redis Streams / Valkey · verificable en cada mensaje |
+| Sin perfilado individual | Prohibido técnicamente · A8 Auditor verifica ausencia de perfiles individuales |
 
-### Puertos Expuestos
+### Capa de agentes
 
-| Puerto | Servicio | Bind | Acceso |
-|--------|----------|------|--------|
-| 5432 | PostgreSQL | 127.0.0.1 | Solo localhost |
-| 5678 | n8n | 127.0.0.1 | Solo localhost |
-| 8001 | api-ingest | 127.0.0.1 | Solo localhost |
-| 8002 | api-triage | 127.0.0.1 | Solo localhost |
-| 8003 | api-analytics | 127.0.0.1 | Solo localhost |
+| Control | Implementación |
+|---|---|
+| Mínimo privilegio | Cada agente accede únicamente a su capa de datos asignada · sin acceso cruzado |
+| Sin agencia autónoma | Ningún agente puede cerrar, degradar o canalizar una llamada sin intervención del operador |
+| Contratos de interfaz | Toda comunicación entre agentes = JSON validado contra schema · sin texto libre |
+| `test()` sin red | Cada agente define función de prueba ejecutable sin red externa |
 
-**Ventaja:** No hay exposición directa a internet.
+### Capa de modelos
+
+| Control | Implementación |
+|---|---|
+| Modelos locales | LLM vía Ollama + modelo local · AASIST3 en servidor propio · sin APIs externas en runtime |
+| Declaración de distribución | Todo modelo declara versión + distribución de entrenamiento + punto de operación (FPR/FNR) |
+| Versión fijada | Modelos con versión fijada y auditable · sin actualización automática sin validación |
+
+### Capa de acceso (producción)
+
+| Control | Estado en prototipo | Requisito para producción |
+|---|---|---|
+| Cifrado en tránsito (TLS) | Puertos restringidos a localhost | TLS obligatorio en bus y todas las interfaces |
+| Autenticación mutua entre agentes | Básica en MVP | Autenticación mutua entre servidores MCP |
+| Autenticación de operadores | Sin autenticación en MVP | Integración con sistema de autenticación del C5 |
 
 ---
 
-## Riesgos Principales
+## Controles OWASP AI Top 10 (2025)
 
-### Matriz de Riesgos
+### LLM01 — Prompt Injection
 
-| Riesgo | Probabilidad | Impacto | Severidad | Mitigación |
-|--------|--------------|---------|-----------|------------|
-| **Fuga de PII** | Media | Alto | Alto | Redacción automática, normalización |
-| **Inyección SQL** | Baja | Alto | Medio | Prepared statements, validación |
-| **DoS** | Media | Medio | Medio | Timeouts, rate limiting (futuro) |
-| **Acceso no autorizado a n8n** | Baja | Medio | Bajo | Basic Auth, localhost only |
-| **Exposición de credenciales** | Baja | Alto | Medio | .env fuera de git, .gitignore |
-| **Logs con PII** | Baja | Alto | Medio | Logs sin PII, redacción |
-| **Acceso físico al host** | Baja | Alto | Medio | Permisos de archivos, encriptación (futuro) |
+**Riesgo:** Un atacante podría inyectar instrucciones maliciosas en el texto de la llamada para manipular el comportamiento de los agentes LLM.
 
-### Riesgos Aceptados (MVP)
+**Control:** Las instrucciones del sistema no son accesibles al usuario final. Las entradas de texto se validan estructuralmente antes de alcanzar el modelo. Los agentes esperan un formato JSON canónico como entrada, no texto libre arbitrario.
 
-Por ser demo educativa, se aceptan los siguientes riesgos:
+### LLM02 — Insecure Output Handling
 
-1. **No encriptación E2E**
-   - Justificación: Demo local, no producción
-   - Mitigación futura: TLS/SSL
+**Riesgo:** Salidas del LLM que no son validadas podrían contener código, PII o datos que downstream provoquen comportamiento no esperado.
 
-2. **Credenciales por defecto**
-   - Justificación: Demo, no datos reales
-   - Mitigación futura: Credenciales fuertes, rotación
+**Control:** Toda salida de cada agente es JSON validado contra su schema de contrato antes de ser enviada al bus o al siguiente agente. Sin texto libre hacia sistemas posteriores.
 
-3. **No rate limiting avanzado**
-   - Justificación: No expuesto a internet
-   - Mitigación futura: Implementar rate limiting
+### LLM03 — Training Data Poisoning
 
-4. **No WAF**
-   - Justificación: No expuesto a internet
-   - Mitigación futura: WAF en producción
+**Riesgo:** Datos de entrenamiento contaminados que degraden la capacidad del modelo.
 
----
+**Control:** AASIST3 usa distribución de entrenamiento declarada públicamente (ASVspoof5 / Codecfake / in-the-wild) con versión fijada. El LLM de razonamiento usa Ollama con modelo local de distribución pública conocida.
 
-## Controles Implementados
+### LLM06 — Sensitive Information Disclosure
 
-### 1. Controles de Red
+**Riesgo:** El modelo podría incluir en sus respuestas información personal del ciudadano.
 
-#### Servicios en Localhost
-```yaml
-# docker-compose.yml
-ports:
-  - "127.0.0.1:5432:5432"  # PostgreSQL
-  - "127.0.0.1:5678:5678"  # n8n
-  - "127.0.0.1:8001:8001"  # api-ingest
-  - "127.0.0.1:8002:8002"  # api-triage
-  - "127.0.0.1:8003:8003"  # api-analytics
-```
+**Control:** PII redactada por A1 antes de que cualquier LLM acceda al contenido. Cero PII en los inputs de los agentes de razonamiento. Verificable en los logs del bus.
 
-**Beneficio:** No hay exposición directa a internet.
+### LLM08 — Excessive Agency
 
-#### Docker Network Interno
-```yaml
-networks:
-  emergency-network:
-    driver: bridge
-```
+**Riesgo:** Un sistema de IA que puede tomar acciones de alto impacto de forma autónoma, sin supervisión humana.
 
-**Beneficio:** Aislamiento de servicios.
+**Control:** Este es el control más importante de CENTINELA. El sistema no puede despachar unidades, contactar autoridades, cerrar casos ni tomar ninguna acción operativa de forma autónoma. Solo sugiere — el operador actúa. Todo nivel ≥5 requiere intervención humana para cerrar.
 
-### 2. Controles de Acceso
+### LLM09 — Overreliance
 
-#### Autenticación n8n
-```env
-N8N_BASIC_AUTH_ACTIVE=true
-N8N_BASIC_AUTH_USER=admin
-N8N_BASIC_AUTH_PASSWORD=changeme
-```
+**Riesgo:** Operadores que confíen ciegamente en las sugerencias del sistema sin aplicar su juicio.
 
-**Recomendación:** Cambiar credenciales en producción.
-
-#### PostgreSQL
-```env
-POSTGRES_USER=emergency_user
-POSTGRES_PASSWORD=changeme
-```
-
-**Recomendación:** Usar contraseñas fuertes en producción.
-
-### 3. Controles de Datos
-
-#### Redacción Automática de PII
-```python
-# api-ingest/app.py
-def redact_pii(text: str) -> str:
-    # Redactar teléfonos
-    text = re.sub(r'\b\d{10}\b', '[PHONE_REDACTED]', text)
-    # Redactar emails
-    text = re.sub(r'\S+@\S+\.\S+', '[EMAIL_REDACTED]', text)
-    # Redactar nombres
-    text = redact_names(text)
-    # Redactar direcciones
-    text = redact_addresses(text)
-    return text
-```
-
-#### Normalización de Ubicaciones
-```python
-# api-analytics/app.py
-def normalize_location_hint(location: str) -> str:
-    # "Calle Madero 45" → "Centro"
-    # "Insurgentes 123" → "Zona simulada"
-    if has_street_number(location):
-        return "Zona simulada"
-    return generalize_zone(location)
-```
-
-#### No Almacenar Transcript Original
-```python
-# api-ingest/app.py
-original_transcript = '[NOT_STORED_PRIVACY_BY_DESIGN]'
-```
-
-### 4. Controles de Código
-
-#### Validación de Inputs
-```python
-# Pydantic models
-class TriageRequest(BaseModel):
-    transcript: str = Field(..., min_length=1, max_length=10000)
-    call_id: str = Field(..., regex=r'^[0-9a-f-]{36}$')
-    consent: bool = True
-```
-
-#### Prepared Statements
-```python
-# psycopg2
-cursor.execute("""
-    INSERT INTO raw.conversations (call_id, redacted_text)
-    VALUES (%s, %s)
-""", (call_id, redacted_text))
-```
-
-#### Sanitización de Logs
-```python
-# No loggear PII
-logger.info(f"Processing call_id: {call_id}")  # ✓
-logger.info(f"Processing call from {name}")    # ✗
-```
-
-### 5. Controles de Configuración
-
-#### .gitignore
-```gitignore
-.env
-*.log
-__pycache__/
-*.pyc
-.DS_Store
-```
-
-#### .env.example (Sin Secretos)
-```env
-# Database
-POSTGRES_PASSWORD=changeme_strong_password
-
-# n8n
-N8N_BASIC_AUTH_PASSWORD=changeme_n8n_password
-```
-
-#### Permisos de Archivos
-```bash
-chmod 600 .env
-chmod 700 scripts/*.sh
-```
-
-### 6. Controles de Separación
-
-#### Schemas en PostgreSQL
-```sql
--- Separación lógica de datos
-CREATE SCHEMA raw;      -- Datos redactados de entrada
-CREATE SCHEMA core;     -- Resultados de clasificación
-CREATE SCHEMA analytics; -- Métricas agregadas
-```
-
-**Beneficio:** Aislamiento de datos sensibles.
+**Control:** La interfaz muestra siempre la justificación de cada sugerencia (`rationale_public`) y la etapa operativa en la que se encuentra el sistema (`public_stage_phrase`). El operador puede corregir cualquier sugerencia en cualquier momento sin restricciones.
 
 ---
 
-## Checklist Previo a Demo
+## A3 Centinela — Especificación técnica de seguridad
 
-### Antes de Iniciar Demo
+### Arquitectura del modelo
 
-- [ ] **Verificar que .env NO está en git**
-  ```bash
-  git status | grep .env
-  # No debe aparecer
-  ```
+```
+Audio de llamada (WAV / stream en vivo)
+           │
+           ▼
+   ┌───────────────────┐
+   │  wav2vec2 / WavLM │  ← Front-end SSL: extracción de features espectrales
+   │  (pre-entrenado)  │
+   └─────────┬─────────┘
+             │ Features de audio (representación latente)
+             ▼
+   ┌───────────────────┐
+   │     AASIST3       │  ← Back-end KAN: clasificación humano/sintético
+   │  (KAN-enhanced)   │
+   └─────────┬─────────┘
+             │
+             ▼
+   synthetic_prob: float
+   decision: human | synthetic | uncertain
+   operating_point: { fpr: float, fnr: float }
+```
 
-- [ ] **Cambiar credenciales por defecto**
-  ```bash
-  nano .env
-  # Cambiar POSTGRES_PASSWORD
-  # Cambiar N8N_BASIC_AUTH_PASSWORD
-  ```
+### Criterio de calibración del umbral
 
-- [ ] **Verificar puertos en localhost**
-  ```bash
-  docker compose ps
-  # Todos los puertos deben estar en 127.0.0.1
-  ```
+El umbral de decisión de AASIST3 se calibra para minimizar el FNR (False Negative Rate) — la probabilidad de clasificar voz sintética como humana.
 
-- [ ] **Verificar que servicios están corriendo**
-  ```bash
-  ./scripts/04_test_environment.sh all
-  # Todos los tests deben pasar
-  ```
+**Justificación:** En el contexto del 911, el costo asimétrico de los errores es:
+- Falso positivo (voz humana clasificada como sintética) → operador recibe alerta, la revisa, continúa atención → costo: fricción operativa
+- Falso negativo (voz sintética clasificada como humana) → ataque de inundación no detectado → costo: saturación del sistema de emergencias
 
-- [ ] **Verificar logs sin PII**
-  ```bash
-  ./scripts/03_logs.sh api-ingest | grep -E '\d{10}|@'
-  # No debe encontrar teléfonos ni emails
-  ```
+El sistema acepta más falsos positivos para reducir falsos negativos. El umbral exacto debe calibrarse con datos reales de CDMX antes del despliegue en producción.
 
-- [ ] **Verificar normalización de ubicaciones**
-  ```bash
-  curl http://localhost:8003/analytics/predictions | jq '.risk_zones'
-  # No debe mostrar direcciones completas
-  ```
+### Distribución de entrenamiento requerida
 
-- [ ] **Verificar que no hay secretos en código**
-  ```bash
-  grep -r "password.*=" services/ | grep -v "changeme"
-  # No debe encontrar contraseñas hardcodeadas
-  ```
-
-- [ ] **Preparar disclaimer visible**
-  ```
-  ⚠️ DEMO EDUCATIVA - NO USAR PARA EMERGENCIAS REALES
-  Datos 100% sintéticos - Sistema no conectado a C5 real
-  ```
-
-### Durante la Demo
-
-- [ ] Mostrar disclaimer al inicio
-- [ ] Usar solo datos sintéticos
-- [ ] No compartir credenciales reales
-- [ ] No exponer .env en pantalla
-- [ ] Mencionar limitaciones de seguridad
-- [ ] Enfatizar "humano en el loop"
-
-### Después de la Demo
-
-- [ ] Detener servicios
-  ```bash
-  ./scripts/02_stop.sh
-  ```
-
-- [ ] Revisar logs por anomalías
-  ```bash
-  ./scripts/03_logs.sh postgres | grep ERROR
-  ```
-
-- [ ] Limpiar datos de prueba (opcional)
-  ```bash
-  docker compose down -v
-  ```
+| Dataset | Estado | Por qué |
+|---|---|---|
+| ASVspoof 2019 | ❌ Insuficiente | No cubre codecs de síntesis modernos (2022-2026) |
+| ASVspoof 2024 / ASVspoof5 | ✅ Recomendado | Cubre distribuciones modernas de TTS y Voice Conversion |
+| Codecfake | ✅ Complementario | Voz sintética generada con codecs de compresión modernos |
+| In-the-wild | ✅ Recomendado para validación | Grabaciones reales de voz sintética en circulación pública |
 
 ---
 
-## Limitaciones de Seguridad
+## Protocolo de comunicación del operador
 
-### Limitaciones del MVP
+Durante la atención de una llamada, el sistema solo comunica al operador la etapa operativa y una justificación breve. Nunca expone la cadena interna de razonamiento.
 
-1. **No Encriptación End-to-End**
-   - Datos en tránsito no encriptados (HTTP, no HTTPS)
-   - Datos en reposo no encriptados en DB
+### Formato obligatorio
 
-2. **Autenticación Básica**
-   - Basic Auth en n8n (no OAuth, no JWT)
-   - No autenticación en APIs (solo localhost)
+```
+"Estoy en la etapa de [recepción / validación / priorización / canalización / seguimiento].
+Detecto [señal operativa breve].
+Voy a [siguiente acción]."
+```
 
-3. **No Rate Limiting Avanzado**
-   - Sin protección contra DoS sofisticado
-   - Sin throttling por IP
+### Frases explícitamente prohibidas
 
-4. **No WAF**
-   - Sin Web Application Firewall
-   - Sin protección contra OWASP Top 10
+- "Mi razonamiento interno es..."
+- "Estoy pensando paso por paso..."
+- "La cadena de pensamiento indica..."
+- "Por probabilidad estadística no vale la pena atender..."
+- "Calculo internamente que..."
 
-5. **No SIEM**
-   - Sin Security Information and Event Management
-   - Sin alertas automáticas de seguridad
-
-6. **No Auditoría Completa**
-   - Sin logs de auditoría detallados
-   - Sin trazabilidad completa de accesos
-
-7. **Credenciales por Defecto**
-   - Contraseñas débiles en .env.example
-   - No rotación automática
-
-8. **No Backup Encriptado**
-   - Sin backups automáticos
-   - Sin encriptación de backups
-
-### Riesgos Residuales
-
-**Riesgos que permanecen en el MVP:**
-
-- ⚠️ Acceso físico al host compromete todo el sistema
-- ⚠️ Credenciales débiles pueden ser adivinadas
-- ⚠️ DoS puede saturar recursos locales
-- ⚠️ Logs pueden contener información sensible si hay bugs
-
-**Mitigación:** No usar en producción sin auditoría completa.
+**Fundamento:** Estas frases podrían generar sobredependencia del operador en el razonamiento del sistema, revelar el proceso interno a actores que intenten manipularlo, y reducir la confianza institucional en la transparencia del sistema.
 
 ---
 
-## Recomendaciones para Producción
+## Pendientes para producción
 
-### Controles Adicionales Requeridos
+Antes de operar con datos reales del 911, se deben completar los siguientes controles:
 
-#### 1. Encriptación
-
-**TLS/SSL:**
-```yaml
-# nginx.conf
-server {
-    listen 443 ssl;
-    ssl_certificate /path/to/cert.pem;
-    ssl_certificate_key /path/to/key.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-}
-```
-
-**Encriptación en Reposo:**
-```sql
--- PostgreSQL
-CREATE EXTENSION pgcrypto;
-ALTER TABLE raw.conversations 
-  ALTER COLUMN redacted_text 
-  TYPE bytea USING pgp_sym_encrypt(redacted_text, 'encryption_key');
-```
-
-#### 2. Autenticación Robusta
-
-**OAuth 2.0 / JWT:**
-```python
-from fastapi.security import OAuth2PasswordBearer
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
-@app.post("/raw-conversations")
-async def create_conversation(token: str = Depends(oauth2_scheme)):
-    # Validar token
-    pass
-```
-
-**Multi-Factor Authentication (MFA):**
-- Implementar 2FA para acceso a n8n
-- Implementar 2FA para acceso a DB
-
-#### 3. Rate Limiting
-
-**Nginx:**
-```nginx
-limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
-
-location /api/ {
-    limit_req zone=api burst=20;
-}
-```
-
-**FastAPI:**
-```python
-from slowapi import Limiter
-from slowapi.util import get_remote_address
-
-limiter = Limiter(key_func=get_remote_address)
-
-@app.post("/raw-conversations")
-@limiter.limit("10/minute")
-async def create_conversation():
-    pass
-```
-
-#### 4. WAF
-
-**ModSecurity:**
-```nginx
-modsecurity on;
-modsecurity_rules_file /etc/nginx/modsec/main.conf;
-```
-
-**Cloudflare:**
-- Activar WAF rules
-- Activar DDoS protection
-- Activar Bot Management
-
-#### 5. SIEM
-
-**ELK Stack:**
-```yaml
-# docker-compose.yml
-elasticsearch:
-  image: elasticsearch:8.0
-logstash:
-  image: logstash:8.0
-kibana:
-  image: kibana:8.0
-```
-
-**Alertas:**
-```yaml
-# elastalert.yml
-alert:
-  - type: frequency
-    num_events: 100
-    timeframe:
-      minutes: 5
-    alert:
-      - email
-```
-
-#### 6. Auditoría
-
-**Logs de Auditoría:**
-```python
-audit_logger.info({
-    "event": "data_access",
-    "user": user_id,
-    "resource": "raw.conversations",
-    "action": "read",
-    "timestamp": datetime.utcnow(),
-    "ip": request.client.host
-})
-```
-
-#### 7. Gestión de Secretos
-
-**HashiCorp Vault:**
-```python
-import hvac
-
-client = hvac.Client(url='http://vault:8200')
-secret = client.secrets.kv.v2.read_secret_version(path='db/password')
-```
-
-**AWS Secrets Manager:**
-```python
-import boto3
-
-client = boto3.client('secretsmanager')
-secret = client.get_secret_value(SecretId='db-password')
-```
-
-#### 8. Pentesting
-
-**Antes de Producción:**
-- [ ] Pentesting por tercero certificado
-- [ ] Revisión de código por expertos
-- [ ] Análisis de vulnerabilidades (OWASP ZAP, Burp Suite)
-- [ ] Pruebas de penetración (Metasploit)
-
-#### 9. Compliance
-
-**Certificaciones:**
-- [ ] ISO 27001 (Gestión de Seguridad de la Información)
-- [ ] SOC 2 (Controles de Seguridad)
-- [ ] PCI DSS (si aplica)
-
-**Auditorías:**
-- [ ] Auditoría legal (LFPDPPP)
-- [ ] Auditoría de seguridad
-- [ ] Auditoría de privacidad
-
-#### 10. Plan de Respuesta a Incidentes
-
-**Procedimientos:**
-1. Detección de incidente
-2. Contención
-3. Erradicación
-4. Recuperación
-5. Lecciones aprendidas
-
-**Contactos:**
-- Equipo de seguridad
-- Legal
-- Comunicación
-- Autoridades (CERT-MX)
+| Control | Descripción | Prioridad |
+|---|---|---|
+| TLS en tránsito | Cifrado end-to-end en bus Redis y APIs | CRÍTICA |
+| Autenticación mutua MCP | Autenticación entre servidores de agentes | CRÍTICA |
+| A8 Auditor activo | Monitoreo semanal con datos reales | CRÍTICA |
+| Calibración AASIST3 CDMX | Ajuste de umbrales con distribución local real | ALTA |
+| Aviso de privacidad LFPDPPP | Publicación por institución operadora | ALTA |
+| Prueba de penetración | Auditoría de seguridad independiente | ALTA |
+| Autenticación de operadores | Integración con sistema de identidad del C5 | ALTA |
 
 ---
 
-## Conclusión
-
-Este MVP implementa **controles de seguridad básicos** suficientes para una demo educativa, pero **NO es seguro para producción**.
-
-**Controles Implementados:**
-- ✅ Servicios en localhost
-- ✅ Redacción de PII
-- ✅ Normalización de ubicaciones
-- ✅ Separación de datos
-- ✅ Logs sin PII
-- ✅ .env fuera de git
-
-**Controles Faltantes para Producción:**
-- ❌ Encriptación E2E
-- ❌ Autenticación robusta
-- ❌ Rate limiting avanzado
-- ❌ WAF
-- ❌ SIEM
-- ❌ Auditoría completa
-- ❌ Pentesting
-- ❌ Certificaciones
-
-**Recordatorio:**
-> No usar este sistema en producción sin auditoría completa de seguridad,  
-> implementación de controles adicionales, y aprobación de autoridades competentes.
-
----
-
-**Versión:** 1.0.0  
-**Fecha:** 2026-06-06  
-**Autor:** Bob  
-**Propósito:** Demo educativa - Hackathon  
-**Nivel de Seguridad:** Básico (MVP)
+*CENTINELA_CDMX_IA · Ciberseguridad v1.0 · Junio 2026*
