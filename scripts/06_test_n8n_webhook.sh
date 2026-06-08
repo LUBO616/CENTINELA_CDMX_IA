@@ -143,9 +143,9 @@ echo -e "${BLUE}================================================================
 echo ""
 
 # Count records
-raw_count=$(docker exec emergency-db psql -U emergency_user -d emergency_demo -t -c "SELECT COUNT(*) FROM raw.conversations;" 2>/dev/null | tr -d ' ')
-triage_count=$(docker exec emergency-db psql -U emergency_user -d emergency_demo -t -c "SELECT COUNT(*) FROM core.triage_results;" 2>/dev/null | tr -d ' ')
-incident_count=$(docker exec emergency-db psql -U emergency_user -d emergency_demo -t -c "SELECT COUNT(*) FROM analytics.incidents;" 2>/dev/null | tr -d ' ')
+raw_count=$(docker exec centinela-db psql -U emergency_user -d centinela_demo -t -c "SELECT COUNT(*) FROM raw.conversations;" 2>/dev/null | tr -d ' ')
+triage_count=$(docker exec centinela-db psql -U emergency_user -d centinela_demo -t -c "SELECT COUNT(*) FROM core.triage_results;" 2>/dev/null | tr -d ' ')
+incident_count=$(docker exec centinela-db psql -U emergency_user -d centinela_demo -t -c "SELECT COUNT(*) FROM analytics.incidents;" 2>/dev/null | tr -d ' ')
 
 echo -e "${CYAN}Database Records:${NC}"
 echo -e "  Raw Conversations: $raw_count"
@@ -155,7 +155,7 @@ echo ""
 
 # Show latest incidents
 echo -e "${CYAN}Latest 3 Incidents:${NC}"
-docker exec emergency-db psql -U emergency_user -d emergency_demo -c "
+docker exec centinela-db psql -U emergency_user -d centinela_demo -c "
 SELECT 
     LEFT(incident_id::text, 8) as id,
     risk_level,
@@ -203,4 +203,3 @@ echo -e "2. Check detailed analytics: ${GREEN}curl http://localhost:8003/analyti
 echo -e "3. View predictions: ${GREEN}curl http://localhost:8003/analytics/predictions | jq${NC}"
 echo ""
 
-# Made with Bob
