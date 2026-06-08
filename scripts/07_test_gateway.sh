@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ============================================================================
-# Test API Gateway - 911 AI Flow Demo
+# Test API Gateway - CENTINELA_CDMX_IA
 # ============================================================================
 # Este script prueba el API Gateway que resuelve CORS para Lovable
 # ============================================================================
@@ -196,4 +196,3 @@ else
     exit 1
 fi
 
-# Made with Bob
