@@ -1,4 +1,4 @@
-# 911 AI Flow Demo - Fase 2 Completada ✅
+# CENTINELA_CDMX_IA - Fase 2 Completada ✅
 
 ## Resumen de Entrega
 
@@ -483,7 +483,7 @@ curl "http://localhost:8003/incidents?category=medical" | jq '.'
 ### Acceder a PostgreSQL
 ```bash
 # Desde el host
-docker exec -it emergency-db psql -U emergency_user -d emergency_demo
+docker exec -it centinela-db psql -U emergency_user -d centinela_demo
 
 # Consultas útiles
 \dt raw.*          # Listar tablas en schema raw
@@ -562,13 +562,13 @@ docker compose --profile services up -d <servicio>
 ### Problema: Base de datos no conecta
 ```bash
 # Verificar que PostgreSQL está corriendo
-docker ps | grep emergency-db
+docker ps | grep centinela-db
 
 # Ver logs de PostgreSQL
 ./scripts/03_logs.sh postgres
 
 # Probar conexión manual
-docker exec -it emergency-db psql -U emergency_user -d emergency_demo -c "SELECT 1;"
+docker exec -it centinela-db psql -U emergency_user -d centinela_demo -c "SELECT 1;"
 ```
 
 ### Problema: Permisos en scripts
