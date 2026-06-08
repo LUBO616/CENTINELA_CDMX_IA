@@ -2,7 +2,7 @@
 
 ## Objetivo Completado
 
-Crear un API Gateway que resuelva problemas de CORS y simplifique la integración de Lovable con el backend 911 AI Flow Demo.
+Crear un API Gateway que resuelva problemas de CORS y simplifique la integración de Lovable con el backend CENTINELA_CDMX_IA.
 
 ---
 
@@ -130,7 +130,7 @@ api-gateway:
     retries: 3
     start_period: 40s
   networks:
-    - emergency-network
+    - centinela-network
 ```
 
 ---
@@ -355,7 +355,7 @@ console.log(result);
 4. **Probar integración:**
    ```bash
    # Levantar backend
-   cd 911-ai-flow-demo
+   cd centinela-cdmx-ia
    ./scripts/01_start.sh all
    
    # Levantar Lovable
