@@ -1,187 +1,135 @@
-# Contrato de APIs - 911 AI Flow Demo
+# Contrato de APIs — CENTINELA_CDMX_IA
 
-## Descripción General
-
-Este documento especifica el contrato HTTP de todos los endpoints del sistema, incluyendo request/response JSON, códigos HTTP, y ejemplos curl.
-
-**⚠️ Importante:** No enviar PII real. Todos los ejemplos usan datos sintéticos.
+> Versión 2.0 · Junio 2026  
+> **Nota:** No enviar PII real. Todos los ejemplos usan datos sintéticos.
 
 ---
 
-## Tabla de Contenidos
+## Tabla de contenidos
 
-1. [api-ingest (Puerto 8001)](#api-ingest-puerto-8001)
-2. [api-triage (Puerto 8002)](#api-triage-puerto-8002)
-3. [api-analytics (Puerto 8003)](#api-analytics-puerto-8003)
-4. [n8n Webhook](#n8n-webhook)
-5. [Códigos HTTP](#códigos-http)
-6. [Errores Comunes](#errores-comunes)
+1. [api-ingest — A1 Recolector (puerto 8001)](#api-ingest)
+2. [api-triage — A4 Triador (puerto 8002)](#api-triage)
+3. [api-analytics — A5/A6 (puerto 8003)](#api-analytics)
+4. [n8n Webhook — A7 Bravo (puerto 5678)](#n8n-webhook)
+5. [api-gateway — CORS proxy (puerto 8010)](#api-gateway)
+6. [Códigos HTTP](#códigos-http)
+7. [Flujo completo de ejemplo](#flujo-completo)
 
 ---
 
-## api-ingest (Puerto 8001)
+## api-ingest — A1 Recolector {#api-ingest}
 
-### Base URL
-```
-http://localhost:8001
-```
+**Base URL:** `http://localhost:8001`
 
-### Endpoints
+### POST /raw-conversations
 
-#### 1. POST /raw-conversations
-
-**Descripción:** Ingestar nueva conversación con redacción automática de PII.
+Recibe la transcripción cruda, redacta PII automáticamente y almacena solo la versión redactada.  
+**La transcripción original nunca se persiste — Privacy by Design.**
 
 **Request:**
-```http
-POST /raw-conversations HTTP/1.1
-Host: localhost:8001
-Content-Type: application/json
-
+```json
 {
-  "transcript": "Hola, mi nombre es Juan Pérez, teléfono 5512345678. Hay un bache en Calle Madero 45.",
+  "transcript": "Hola, hay un bache en la calle principal. Teléfono 5512345678.",
   "metadata": {
-    "source": "demo",
-    "timestamp": "2026-06-06T12:00:00Z"
+    "source": "operator_dashboard",
+    "timestamp": "2026-06-08T14:00:00Z"
   }
 }
 ```
 
-**Response (200 OK):**
+**Response 201:**
 ```json
 {
   "call_id": "123e4567-e89b-12d3-a456-426614174000",
   "trace_id": "223e4567-e89b-12d3-a456-426614174000",
-  "redacted_text": "Hola, mi nombre es [NAME_REDACTED], teléfono [PHONE_REDACTED]. Hay un bache en [ADDRESS_REDACTED].",
-  "stored_at": "2026-06-06T12:00:01.123Z",
+  "redacted_text": "Hola, hay un bache en la calle principal. Teléfono [TELÉFONO-REDACTADO].",
   "redaction_summary": {
     "phones_redacted": 1,
     "emails_redacted": 0,
-    "names_redacted": 1,
-    "addresses_redacted": 1
-  }
+    "names_redacted": 0,
+    "addresses_redacted": 0
+  },
+  "created_at": "2026-06-08T14:00:01.123Z"
 }
 ```
 
-**Ejemplo curl:**
+> **Nota:** El campo es `created_at` (no `stored_at`).  
+> Los marcadores de redacción usan formato español: `[TELÉFONO-REDACTADO]`, `[NOMBRE-REDACTADO]`, `[DIRECCIÓN-REDACTADA]`, `[EMAIL-REDACTADO]`.
+
+**Campos del request:**
+- `transcript` (string, requerido, mín. 1 char): texto de la llamada
+- `metadata` (object, opcional): metadatos adicionales
+
+**curl:**
 ```bash
-curl -X POST http://localhost:8001/raw-conversations \
+curl -s -X POST http://localhost:8001/raw-conversations \
   -H "Content-Type: application/json" \
-  -d '{
-    "transcript": "Hola, necesito reportar un bache. Mi teléfono es 5512345678.",
-    "metadata": {
-      "source": "test",
-      "timestamp": "2026-06-06T12:00:00Z"
-    }
-  }'
+  -d '{"transcript": "Hay un bache en la calle. Tel 5512345678.", "metadata": {"source": "test"}}'
 ```
-
-**Campos:**
-- `transcript` (string, required): Texto de la llamada (1-10000 caracteres)
-- `metadata` (object, optional): Metadatos adicionales
-
-**Códigos HTTP:**
-- `200 OK`: Conversación ingresada exitosamente
-- `400 Bad Request`: Payload inválido
-- `422 Unprocessable Entity`: Validación fallida
-- `500 Internal Server Error`: Error del servidor
 
 ---
 
-#### 2. GET /raw-conversations
+### GET /raw-conversations
 
-**Descripción:** Listar conversaciones redactadas (paginado).
+Lista conversaciones redactadas paginadas.
 
-**Request:**
-```http
-GET /raw-conversations?limit=10&offset=0 HTTP/1.1
-Host: localhost:8001
-```
-
-**Response (200 OK):**
+**Response 200:**
 ```json
 {
   "total": 25,
   "items": [
     {
-      "call_id": "123e4567-e89b-12d3-a456-426614174000",
-      "trace_id": "223e4567-e89b-12d3-a456-426614174000",
-      "redacted_text": "Hola, mi nombre es [NAME_REDACTED]...",
-      "timestamp": "2026-06-06T12:00:01Z"
+      "call_id": "123e4567-...",
+      "trace_id": "223e4567-...",
+      "redacted_text": "Hola, hay un bache en [DIRECCIÓN-REDACTADA]...",
+      "created_at": "2026-06-08T14:00:01Z"
     }
   ]
 }
 ```
 
-**Ejemplo curl:**
-```bash
-curl http://localhost:8001/raw-conversations?limit=5
-```
-
-**Query Parameters:**
-- `limit` (int, optional, default=10): Número de resultados
-- `offset` (int, optional, default=0): Offset para paginación
+**Query params:** `limit` (default 50, máx 100) · `offset` (default 0)
 
 ---
 
-#### 3. GET /health
+### GET /health
 
-**Descripción:** Health check del servicio.
-
-**Request:**
-```http
-GET /health HTTP/1.1
-Host: localhost:8001
-```
-
-**Response (200 OK):**
 ```json
 {
   "status": "healthy",
   "service": "api-ingest",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "database": "connected",
-  "total_conversations": 25,
-  "timestamp": "2026-06-06T12:00:00Z"
+  "timestamp": "2026-06-08T14:00:00Z"
 }
-```
-
-**Ejemplo curl:**
-```bash
-curl http://localhost:8001/health
 ```
 
 ---
 
-## api-triage (Puerto 8002)
+## api-triage — A4 Triador {#api-triage}
 
-### Base URL
-```
-http://localhost:8002
-```
+**Base URL:** `http://localhost:8002`
 
-### Endpoints
+### POST /triage
 
-#### 1. POST /triage
+Clasificación determinista 1-10 con detección de señales P0, grupos de protección reforzada y canalización a autoridades CDMX.
 
-**Descripción:** Clasificar llamada con IA determinista.
+**RESTRICCIÓN TÉCNICA:** Llamadas con señales P0 activas nunca se degradan por debajo de nivel 6.
 
 **Request:**
-```http
-POST /triage HTTP/1.1
-Host: localhost:8002
-Content-Type: application/json
-
+```json
 {
   "transcript": "Hay un incendio en mi edificio, necesito ayuda urgente",
   "call_id": "123e4567-e89b-12d3-a456-426614174000",
   "trace_id": "223e4567-e89b-12d3-a456-426614174000",
-  "consent": true,
+  "consent": false,
   "location_hint": "Colonia Centro"
 }
 ```
 
-**Response (200 OK):**
+> **Nota:** `consent` es `false` por defecto — gate SOLID desactivado. Solo enviar `true` cuando el ciudadano lo autorice explícitamente.
+
+**Response 200:**
 ```json
 {
   "call_id": "123e4567-e89b-12d3-a456-426614174000",
@@ -192,104 +140,71 @@ Content-Type: application/json
   "case_category": "protection_civil",
   "medical_category": null,
   "protected_group_flags": {
-    "nna_involved": false,
-    "elderly": false,
+    "child_or_adolescent": false,
+    "older_adult": false,
     "disability": false,
-    "gender_violence": false
+    "woman": false,
+    "migrant_or_international_protection": false,
+    "indigenous_person": false,
+    "lgbttti": false,
+    "homelessness": false,
+    "human_rights_defender": false
   },
   "best_interest_child": false,
   "human_required": true,
-  "primary_authority": "Protección Civil",
-  "support_authorities": ["Bomberos", "ERUM"],
-  "public_stage_phrase": "Emergencia de incendio detectada. Unidades en camino.",
-  "rationale_public": "Incendio requiere atención inmediata de Protección Civil y Bomberos.",
+  "primary_authority": "Protección Civil CDMX / Heroico Cuerpo de Bomberos",
+  "support_authorities": ["Secretaría de Salud CDMX", "SSC", "C5"],
+  "public_stage_phrase": "Estoy en la etapa de priorización. Atención prioritaria activada.",
+  "rationale_public": "Señales detectadas: incendio; Nivel crítico",
   "trust_flags": {
-    "confidence_score": 0.95,
+    "confidence_score": 0.85,
     "ambiguity_detected": false
   },
   "p0_signals": ["incendio"],
   "keywords_detected": {
-    "protection_civil": ["incendio"],
-    "urgency": ["urgente", "ayuda"]
+    "protection_civil": ["incendio"]
   }
 }
 ```
 
-**Ejemplo curl:**
+**Grupos de protección reforzada detectados automáticamente:**
+`child_or_adolescent` · `older_adult` · `disability` · `woman` · `migrant_or_international_protection` · `indigenous_person` · `lgbttti` · `homelessness` · `human_rights_defender`
+
+> Uso exclusivo para priorización protectora. Nunca para perfilar ni discriminar.
+
+**curl:**
 ```bash
-curl -X POST http://localhost:8002/triage \
+curl -s -X POST http://localhost:8002/triage \
   -H "Content-Type: application/json" \
-  -d '{
-    "transcript": "Hay un incendio en mi edificio",
-    "call_id": "123e4567-e89b-12d3-a456-426614174000",
-    "trace_id": "223e4567-e89b-12d3-a456-426614174000",
-    "consent": true,
-    "location_hint": "Colonia Centro"
-  }'
+  -d '{"transcript": "Hay un incendio", "call_id": "UUID_AQUI", "consent": false}'
 ```
-
-**Campos:**
-- `transcript` (string, required): Texto redactado de la llamada
-- `call_id` (string, required): UUID de la llamada
-- `trace_id` (string, optional): UUID de trazabilidad
-- `consent` (boolean, optional, default=true): Consentimiento
-- `location_hint` (string, optional): Ubicación aproximada
-
-**Códigos HTTP:**
-- `200 OK`: Clasificación exitosa
-- `400 Bad Request`: Payload inválido
-- `422 Unprocessable Entity`: call_id no existe
-- `500 Internal Server Error`: Error del servidor
 
 ---
 
-#### 2. GET /health
+### GET /health
 
-**Descripción:** Health check del servicio.
-
-**Request:**
-```http
-GET /health HTTP/1.1
-Host: localhost:8002
-```
-
-**Response (200 OK):**
 ```json
 {
   "status": "healthy",
   "service": "api-triage",
-  "version": "1.0.0",
-  "rules_loaded": 120,
-  "timestamp": "2026-06-06T12:00:00Z"
+  "version": "2.0.0",
+  "rules_loaded": 145,
+  "timestamp": "2026-06-08T14:00:00Z"
 }
-```
-
-**Ejemplo curl:**
-```bash
-curl http://localhost:8002/health
 ```
 
 ---
 
-## api-analytics (Puerto 8003)
+## api-analytics — A5 Cartógrafo / A6 Estratega {#api-analytics}
 
-### Base URL
-```
-http://localhost:8003
-```
+**Base URL:** `http://localhost:8003`
 
-### Endpoints
+### POST /incidents
 
-#### 1. POST /incidents
-
-**Descripción:** Registrar incidente clasificado.
+Registra incidente clasificado para analítica geoespacial.
 
 **Request:**
-```http
-POST /incidents HTTP/1.1
-Host: localhost:8003
-Content-Type: application/json
-
+```json
 {
   "call_id": "123e4567-e89b-12d3-a456-426614174000",
   "trace_id": "223e4567-e89b-12d3-a456-426614174000",
@@ -302,154 +217,51 @@ Content-Type: application/json
 }
 ```
 
-**Response (201 Created):**
+> `location_hint` se normaliza automáticamente a nivel de alcaldía — nunca se almacena dirección completa.
+
+**Response 201:**
 ```json
 {
   "incident_id": "323e4567-e89b-12d3-a456-426614174000",
-  "stored_at": "2026-06-06T12:00:02Z",
+  "stored_at": "2026-06-08T14:00:02Z",
   "status": "stored"
 }
 ```
 
-**Ejemplo curl:**
-```bash
-curl -X POST http://localhost:8003/incidents \
-  -H "Content-Type: application/json" \
-  -d '{
-    "call_id": "123e4567-e89b-12d3-a456-426614174000",
-    "trace_id": "223e4567-e89b-12d3-a456-426614174000",
-    "risk_level": 8,
-    "branch": "critical",
-    "case_category": "protection_civil",
-    "human_required": true,
-    "p0_signals": ["incendio"],
-    "location_hint": "Colonia Centro"
-  }'
-```
-
-**Campos:**
-- `call_id` (string, required): UUID de la llamada
-- `trace_id` (string, required): UUID de trazabilidad
-- `risk_level` (int, required): Nivel de riesgo 1-10
-- `branch` (string, required): low/mid/critical
-- `case_category` (string, required): Categoría del caso
-- `human_required` (boolean, required): Requiere humano
-- `p0_signals` (array, required): Señales P0 detectadas
-- `location_hint` (string, optional): Ubicación (se normaliza)
-
 ---
 
-#### 2. GET /incidents
+### GET /analytics/summary
 
-**Descripción:** Listar incidentes (paginado).
+Métricas agregadas del sistema.
 
-**Request:**
-```http
-GET /incidents?limit=10&offset=0 HTTP/1.1
-Host: localhost:8003
-```
-
-**Response (200 OK):**
-```json
-{
-  "total": 50,
-  "items": [
-    {
-      "incident_id": "323e4567-e89b-12d3-a456-426614174000",
-      "call_id": "123e4567-e89b-12d3-a456-426614174000",
-      "risk_level": 8,
-      "branch": "critical",
-      "case_category": "protection_civil",
-      "human_required": true,
-      "timestamp": "2026-06-06T12:00:02Z"
-    }
-  ]
-}
-```
-
-**Ejemplo curl:**
-```bash
-curl http://localhost:8003/incidents?limit=5
-```
-
----
-
-#### 3. GET /analytics/summary
-
-**Descripción:** Obtener métricas agregadas.
-
-**Request:**
-```http
-GET /analytics/summary HTTP/1.1
-Host: localhost:8003
-```
-
-**Response (200 OK):**
+**Response 200:**
 ```json
 {
   "total_incidents": 50,
-  "by_risk_level": {
-    "1": 5,
-    "2": 8,
-    "3": 10,
-    "4": 7,
-    "5": 6,
-    "6": 4,
-    "7": 3,
-    "8": 4,
-    "9": 2,
-    "10": 1
-  },
-  "by_branch": {
-    "low": 30,
-    "mid": 6,
-    "critical": 14
-  },
-  "by_category": {
-    "public_services": 20,
-    "security": 10,
-    "medical": 8,
-    "protection_civil": 7,
-    "social_support": 3,
-    "victim_attention": 2
-  },
+  "by_risk_level": {"6": 4, "7": 3, "8": 4, "9": 2, "10": 1},
+  "by_branch": {"low": 30, "mid": 6, "critical": 14},
+  "by_category": {"security": 20, "medical": 15, "protection_civil": 10},
   "human_required_count": 20,
   "p0_signals_count": 14,
   "nna_involved_count": 3,
-  "last_updated": "2026-06-06T12:00:00Z"
+  "last_updated": "2026-06-08T14:00:00Z"
 }
-```
-
-**Ejemplo curl:**
-```bash
-curl http://localhost:8003/analytics/summary | jq
 ```
 
 ---
 
-#### 4. GET /analytics/predictions
+### GET /analytics/predictions
 
-**Descripción:** Obtener predicciones mock.
+Predicciones de volumen y zonas de riesgo (mock para MVP).
 
-**Request:**
-```http
-GET /analytics/predictions HTTP/1.1
-Host: localhost:8003
-```
-
-**Response (200 OK):**
+**Response 200:**
 ```json
 {
   "volume_forecast": {
     "predicted_calls": 28,
     "confidence": 0.75,
     "trend": "increasing",
-    "hourly_pattern": [
-      {"hour": 0, "avg_calls": 8},
-      {"hour": 1, "avg_calls": 6},
-      {"hour": 8, "avg_calls": 25},
-      {"hour": 12, "avg_calls": 30}
-    ]
+    "hourly_pattern": [{"hour": 8, "avg_calls": 25}]
   },
   "category_distribution": {
     "security": 0.30,
@@ -460,429 +272,170 @@ Host: localhost:8003
     "victim_attention": 0.05
   },
   "risk_zones": [
-    {
-      "zone": "Centro",
-      "risk_score": 7.5,
-      "incident_count": 15,
-      "primary_category": "security"
-    },
-    {
-      "zone": "Iztapalapa",
-      "risk_score": 6.8,
-      "incident_count": 12,
-      "primary_category": "medical"
-    }
+    {"zone": "Iztapalapa", "risk_score": 6.8, "incident_count": 38, "primary_category": "security"}
   ],
-  "generated_at": "2026-06-06T12:00:00Z",
+  "generated_at": "2026-06-08T14:00:00Z",
   "ai_model_version": "mock-v1.0"
 }
 ```
 
-**Ejemplo curl:**
-```bash
-curl http://localhost:8003/analytics/predictions | jq
-```
-
-**Nota:** Las predicciones son mock/demo, no basadas en ML real.
+> Las predicciones son mock/demo. En producción se integran con A5 Cartógrafo (H3 + PostGIS + INEGI).
 
 ---
 
-#### 5. GET /health
+## n8n Webhook — A7 Bravo {#n8n-webhook}
 
-**Descripción:** Health check del servicio.
+**Base URL:** `http://localhost:5678`  
+**Autenticación:** Basic Auth (`admin` / valor en `.env`)
+
+### POST /webhook/911-call
+
+Endpoint principal. Orquesta el flujo completo: ingest → triage → analytics → respuesta consolidada.
 
 **Request:**
-```http
-GET /health HTTP/1.1
-Host: localhost:8003
-```
-
-**Response (200 OK):**
 ```json
-{
-  "status": "healthy",
-  "service": "api-analytics",
-  "version": "1.0.0",
-  "database": "connected",
-  "total_incidents": 50,
-  "timestamp": "2026-06-06T12:00:00Z"
-}
-```
-
-**Ejemplo curl:**
-```bash
-curl http://localhost:8003/health
-```
-
----
-
-## n8n Webhook
-
-### Base URL
-```
-http://localhost:5678
-```
-
-### Endpoint
-
-#### POST /webhook/911-call
-
-**Descripción:** Webhook principal que orquesta el flujo completo.
-
-**Autenticación:** Basic Auth (admin/changeme)
-
-**Request:**
-```http
-POST /webhook/911-call HTTP/1.1
-Host: localhost:5678
-Content-Type: application/json
-Authorization: Basic YWRtaW46Y2hhbmdlbWU=
-
 {
   "transcript": "Hay un incendio en mi edificio, necesito ayuda urgente",
   "metadata": {
-    "source": "lovable_dashboard",
-    "timestamp": "2026-06-06T12:00:00Z"
+    "source": "operator_dashboard",
+    "timestamp": "2026-06-08T14:00:00Z"
   },
   "location_hint": "Colonia Centro",
-  "solid_consent": true
+  "solid_consent": false
 }
 ```
 
-**Response (200 OK):**
+> `solid_consent` es `false` por defecto. Solo enviar `true` cuando el ciudadano lo autorice explícitamente (gate SOLID, LFPDPPP Art. 8).
+
+**Response 200:**
 ```json
 {
   "success": true,
-  "call_id": "123e4567-e89b-12d3-a456-426614174000",
-  "trace_id": "223e4567-e89b-12d3-a456-426614174000",
+  "call_id": "123e4567-...",
+  "trace_id": "223e4567-...",
   "risk_level": 8,
   "branch": "critical",
   "case_category": "protection_civil",
   "human_required": true,
   "p0_signals": ["incendio"],
-  "primary_authority": "Protección Civil",
-  "support_authorities": ["Bomberos", "ERUM"],
-  "incident_id": "323e4567-e89b-12d3-a456-426614174000",
-  "status": "processed",
-  "public_stage_phrase": "Emergencia de incendio detectada. Unidades en camino.",
-  "rationale_public": "Incendio requiere atención inmediata de Protección Civil y Bomberos.",
-  "processed_at": "2026-06-06T12:00:02Z"
+  "primary_authority": "Protección Civil CDMX / Heroico Cuerpo de Bomberos",
+  "support_authorities": ["Secretaría de Salud CDMX", "SSC", "C5"],
+  "best_interest_child": false,
+  "protected_group_flags": {},
+  "incident_id": "323e4567-...",
+  "public_stage_phrase": "Estoy en la etapa de priorización. Atención prioritaria activada.",
+  "rationale_public": "Señales detectadas: incendio; Nivel crítico",
+  "processed_at": "2026-06-08T14:00:02Z"
 }
 ```
 
-**Response (400 Bad Request) - Payload Inválido:**
-```json
-{
-  "success": false,
-  "error": "Invalid payload",
-  "message": "Field transcript is required",
-  "received": {
-    "metadata": {"source": "test"}
-  }
-}
-```
-
-**Ejemplo curl:**
+**curl:**
 ```bash
-curl -X POST http://localhost:5678/webhook/911-call \
+curl -s -X POST http://localhost:5678/webhook/911-call \
   -u admin:changeme \
   -H "Content-Type: application/json" \
-  -d '{
-    "transcript": "Hay un incendio en mi edificio",
-    "location_hint": "Colonia Centro",
-    "solid_consent": true
-  }'
+  -d '{"transcript": "Hay un incendio", "location_hint": "Colonia Centro", "solid_consent": false}'
 ```
-
-**Campos:**
-- `transcript` (string, required): Texto de la llamada
-- `metadata` (object, optional): Metadatos adicionales
-- `location_hint` (string, optional): Ubicación aproximada
-- `solid_consent` (boolean, optional, default=true): Consentimiento
-
-**Códigos HTTP:**
-- `200 OK`: Procesamiento exitoso
-- `400 Bad Request`: Payload inválido
-- `401 Unauthorized`: Autenticación fallida
-- `500 Internal Server Error`: Error en algún servicio
 
 ---
 
-## Códigos HTTP
+## api-gateway — CORS proxy {#api-gateway}
 
-### Códigos de Éxito
+**Base URL:** `http://localhost:8010`
 
-| Código | Significado | Uso |
-|--------|-------------|-----|
-| 200 OK | Solicitud exitosa | GET, POST (mayoría) |
+Proxy CORS para el dashboard Lovable. Expone el flujo 911 y los endpoints de analítica sin exponer credenciales directas de n8n.
+
+| Endpoint gateway | Redirige a |
+|---|---|
+| `POST /911-call` | `http://n8n:5678/webhook/911-call` |
+| `GET /analytics/summary` | `http://api-analytics:8003/analytics/summary` |
+| `GET /analytics/predictions` | `http://api-analytics:8003/analytics/predictions` |
+| `GET /health` | Estado del gateway |
+
+**Variables de entorno para Lovable:**
+```
+VITE_N8N_WEBHOOK_URL=http://localhost:8010/911-call
+VITE_ANALYTICS_SUMMARY_URL=http://localhost:8010/analytics/summary
+VITE_ANALYTICS_PREDICTIONS_URL=http://localhost:8010/analytics/predictions
+```
+
+---
+
+## Códigos HTTP {#códigos-http}
+
+| Código | Significado | Cuándo ocurre |
+|---|---|---|
+| 200 OK | Éxito | GET, POST de clasificación |
 | 201 Created | Recurso creado | POST /incidents |
-
-### Códigos de Error del Cliente
-
-| Código | Significado | Causa Común |
-|--------|-------------|-------------|
 | 400 Bad Request | Payload inválido | JSON malformado, campos faltantes |
-| 401 Unauthorized | Autenticación fallida | Credenciales incorrectas (n8n) |
-| 404 Not Found | Recurso no encontrado | Endpoint incorrecto |
-| 422 Unprocessable Entity | Validación fallida | call_id no existe, datos inválidos |
-
-### Códigos de Error del Servidor
-
-| Código | Significado | Causa Común |
-|--------|-------------|-------------|
-| 500 Internal Server Error | Error del servidor | Error de DB, bug en código |
-| 503 Service Unavailable | Servicio no disponible | Servicio caído, timeout |
+| 401 Unauthorized | Autenticación fallida | Credenciales n8n incorrectas |
+| 422 Unprocessable Entity | Validación fallida | `call_id` no existe en BD |
+| 500 Internal Server Error | Error del servidor | Error de BD, servicio caído |
 
 ---
 
-## Errores Comunes
+## Flujo completo de ejemplo {#flujo-completo}
 
-### 1. call_id No Existe
-
-**Problema:**
 ```bash
-curl -X POST http://localhost:8002/triage \
+# 1. Ingestar llamada
+INGEST=$(curl -s -X POST http://localhost:8001/raw-conversations \
   -H "Content-Type: application/json" \
-  -d '{
-    "transcript": "Test",
-    "call_id": "00000000-0000-0000-0000-000000000000",
-    "consent": true
-  }'
-```
+  -d '{"transcript": "Auxilio, hay un niño sangrando. Tiene 8 años.", "metadata": {"source": "test"}}')
 
-**Error (422):**
-```json
-{
-  "detail": "call_id not found in database"
-}
-```
+CALL_ID=$(echo $INGEST | jq -r '.call_id')
+TRACE_ID=$(echo $INGEST | jq -r '.trace_id')
+REDACTED=$(echo $INGEST | jq -r '.redacted_text')
 
-**Solución:** Primero crear conversación en api-ingest, luego usar el call_id devuelto.
-
----
-
-### 2. Transcript Vacío
-
-**Problema:**
-```bash
-curl -X POST http://localhost:8001/raw-conversations \
+# 2. Clasificar
+TRIAGE=$(curl -s -X POST http://localhost:8002/triage \
   -H "Content-Type: application/json" \
-  -d '{
-    "transcript": "",
-    "metadata": {}
-  }'
-```
+  -d "{"transcript": "$REDACTED", "call_id": "$CALL_ID", "consent": false}")
 
-**Error (422):**
-```json
-{
-  "detail": [
-    {
-      "loc": ["body", "transcript"],
-      "msg": "ensure this value has at least 1 characters",
-      "type": "value_error.any_str.min_length"
-    }
-  ]
-}
-```
+RISK=$(echo $TRIAGE | jq '.risk_level')
+BRANCH=$(echo $TRIAGE | jq -r '.branch')
+P0=$(echo $TRIAGE | jq -c '.p0_signals')
+NNA=$(echo $TRIAGE | jq '.best_interest_child')
 
-**Solución:** Enviar transcript con al menos 1 carácter.
+echo "Nivel: $RISK | Rama: $BRANCH | P0: $P0 | NNA: $NNA"
+# Esperado: Nivel: 8+ | Rama: critical | P0: ["sangrado grave","maltrato infantil"] | NNA: true
 
----
-
-### 3. JSON Malformado
-
-**Problema:**
-```bash
-curl -X POST http://localhost:8001/raw-conversations \
+# 3. Registrar en analítica
+curl -s -X POST http://localhost:8003/incidents \
   -H "Content-Type: application/json" \
-  -d '{"transcript": "Test"'  # Falta cerrar }
-```
+  -d "{"call_id": "$CALL_ID", "trace_id": "$TRACE_ID",
+       "risk_level": $RISK, "branch": "$BRANCH",
+       "case_category": "medical", "human_required": true,
+       "p0_signals": $P0}" | jq '.incident_id'
 
-**Error (400):**
-```json
-{
-  "detail": "Invalid JSON"
-}
-```
-
-**Solución:** Verificar sintaxis JSON.
-
----
-
-### 4. Servicio No Disponible
-
-**Problema:**
-```bash
-curl http://localhost:8001/health
-# curl: (7) Failed to connect to localhost port 8001: Connection refused
-```
-
-**Solución:**
-```bash
-# Verificar que servicios están corriendo
-docker compose ps
-
-# Levantar servicios si es necesario
-./scripts/01_start.sh all
+# 4. Ver resumen
+curl -s http://localhost:8003/analytics/summary | jq '{total_incidents, p0_signals_count, human_required_count}'
 ```
 
 ---
 
-### 5. Autenticación Fallida en n8n
+## Errores comunes
 
-**Problema:**
+### call_id no existe (422)
 ```bash
-curl -X POST http://localhost:5678/webhook/911-call \
-  -H "Content-Type: application/json" \
-  -d '{"transcript": "Test"}'
+# Error: triage antes de ingest
+curl -X POST http://localhost:8002/triage -d '{"call_id": "00000000-...", "transcript": "test", "consent": false}'
+# Solución: siempre ingestar primero con api-ingest
 ```
 
-**Error (401):**
-```json
-{
-  "error": "Unauthorized"
-}
+### Autenticación n8n (401)
+```bash
+# Error: llamar webhook sin credenciales
+curl -X POST http://localhost:5678/webhook/911-call -d '{"transcript": "test"}'
+# Solución: usar -u admin:changeme o el api-gateway en puerto 8010
 ```
 
-**Solución:** Agregar credenciales Basic Auth:
+### Servicios no disponibles
 ```bash
-curl -X POST http://localhost:5678/webhook/911-call \
-  -u admin:changeme \
-  -H "Content-Type: application/json" \
-  -d '{"transcript": "Test"}'
+docker compose ps                    # verificar estado
+./scripts/01_start.sh all            # levantar todo
+./scripts/04_test_environment.sh all # validar
 ```
 
 ---
 
-## Flujo Completo de Ejemplo
-
-### Escenario: Llamada Crítica P0
-
-```bash
-# 1. Ingestar conversación
-INGEST_RESPONSE=$(curl -s -X POST http://localhost:8001/raw-conversations \
-  -H "Content-Type: application/json" \
-  -d '{
-    "transcript": "¡Auxilio! Hay un niño sangrando mucho de la cabeza.",
-    "metadata": {"source": "test"}
-  }')
-
-# 2. Extraer call_id y trace_id
-CALL_ID=$(echo $INGEST_RESPONSE | jq -r '.call_id')
-TRACE_ID=$(echo $INGEST_RESPONSE | jq -r '.trace_id')
-REDACTED=$(echo $INGEST_RESPONSE | jq -r '.redacted_text')
-
-echo "Call ID: $CALL_ID"
-echo "Trace ID: $TRACE_ID"
-
-# 3. Clasificar con triage
-TRIAGE_RESPONSE=$(curl -s -X POST http://localhost:8002/triage \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"transcript\": \"$REDACTED\",
-    \"call_id\": \"$CALL_ID\",
-    \"trace_id\": \"$TRACE_ID\",
-    \"consent\": true,
-    \"location_hint\": \"Colonia Centro\"
-  }")
-
-# 4. Extraer resultados
-RISK_LEVEL=$(echo $TRIAGE_RESPONSE | jq -r '.risk_level')
-BRANCH=$(echo $TRIAGE_RESPONSE | jq -r '.branch')
-CATEGORY=$(echo $TRIAGE_RESPONSE | jq -r '.case_category')
-HUMAN_REQ=$(echo $TRIAGE_RESPONSE | jq -r '.human_required')
-P0_SIGNALS=$(echo $TRIAGE_RESPONSE | jq -c '.p0_signals')
-
-echo "Risk Level: $RISK_LEVEL"
-echo "Branch: $BRANCH"
-echo "Human Required: $HUMAN_REQ"
-echo "P0 Signals: $P0_SIGNALS"
-
-# 5. Registrar en analytics
-ANALYTICS_RESPONSE=$(curl -s -X POST http://localhost:8003/incidents \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"call_id\": \"$CALL_ID\",
-    \"trace_id\": \"$TRACE_ID\",
-    \"risk_level\": $RISK_LEVEL,
-    \"branch\": \"$BRANCH\",
-    \"case_category\": \"$CATEGORY\",
-    \"human_required\": $HUMAN_REQ,
-    \"p0_signals\": $P0_SIGNALS,
-    \"location_hint\": \"Colonia Centro\"
-  }")
-
-INCIDENT_ID=$(echo $ANALYTICS_RESPONSE | jq -r '.incident_id')
-echo "Incident ID: $INCIDENT_ID"
-
-# 6. Ver métricas
-curl -s http://localhost:8003/analytics/summary | jq '{
-  total_incidents,
-  by_branch,
-  human_required_count,
-  p0_signals_count
-}'
-```
-
-**Resultado Esperado:**
-```
-Call ID: 123e4567-e89b-12d3-a456-426614174000
-Trace ID: 223e4567-e89b-12d3-a456-426614174000
-Risk Level: 8
-Branch: critical
-Human Required: true
-P0 Signals: ["sangrado grave","maltrato infantil"]
-Incident ID: 323e4567-e89b-12d3-a456-426614174000
-{
-  "total_incidents": 51,
-  "by_branch": {
-    "low": 30,
-    "mid": 6,
-    "critical": 15
-  },
-  "human_required_count": 21,
-  "p0_signals_count": 15
-}
-```
-
----
-
-## Notas Importantes
-
-### Privacidad
-
-- ❌ **NO enviar PII real** en ningún endpoint
-- ✅ Usar datos sintéticos para pruebas
-- ✅ El sistema redacta automáticamente, pero mejor no enviar PII
-
-### Datos Sintéticos
-
-**Ejemplos de datos seguros para pruebas:**
-```json
-{
-  "transcript": "Hay un bache en la calle principal",
-  "location_hint": "Colonia Centro"
-}
-```
-
-**NO usar:**
-```json
-{
-  "transcript": "Mi nombre es Juan Pérez Gómez, INE 1234567890, vivo en Calle Real 123 Int 4B",
-  "location_hint": "Calle Real 123, Colonia Centro, CP 06000"
-}
-```
-
-### Limitaciones
-
-- Las predicciones son **mock/demo**, no basadas en ML real
-- El sistema es **local**, no expuesto a internet
-- No usar para **emergencias reales**
-
----
-
-**Versión:** 1.0.0  
-**Fecha:** 2026-06-06  
-**Autor:** Bob  
-**Propósito:** Demo educativa - Hackathon
+*CENTINELA_CDMX_IA · Contrato de APIs v2.0 · Junio 2026*
