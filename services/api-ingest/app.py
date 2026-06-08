@@ -1,6 +1,6 @@
 """
-911 AI Flow Demo - API Ingest Service
-Receives raw conversations, redacts PII, and stores in database
+CENTINELA_CDMX_IA - Agente A1 Recolector
+Ingesta transcripciones 911, redacta PII automáticamente. Privacy by Design.
 """
 
 import os
@@ -46,9 +46,9 @@ safe_logger = SafeLogger(logger)
 
 # Initialize FastAPI
 app = FastAPI(
-    title="911 AI Flow Demo - API Ingest",
-    description="Receives and redacts emergency call transcripts",
-    version="1.0.0"
+    title="CENTINELA_CDMX_IA - A1 Recolector",
+    description="Ingesta y redacción de PII — A1 Recolector",
+    version="2.0.0"
 )
 
 # CORS configuration
@@ -309,4 +309,3 @@ if __name__ == "__main__":
     port = int(os.getenv("SERVICE_PORT", 8001))
     uvicorn.run(app, host="0.0.0.0", port=port)
 
-# Made with Bob
