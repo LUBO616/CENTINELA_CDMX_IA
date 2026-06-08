@@ -1,7 +1,7 @@
 """
-911 AI Flow Demo - API Triage Service
-Deterministic AI classification using keyword matrix and P0 signal detection
-CRITICAL: Never downgrade or close calls with P0 signals
+CENTINELA_CDMX_IA - Agente A4 Triador
+Clasificación determinista 1-10 con detección P0, grupos protegidos y canalización CDMX
+RESTRICCIÓN CRÍTICA: Nunca degradar llamadas con señales P0 activas
 """
 
 import os
@@ -16,21 +16,18 @@ import psycopg2
 from psycopg2.extras import RealDictCursor, Json
 import logging
 
-# Configure logging
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO"),
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
-# Initialize FastAPI
 app = FastAPI(
-    title="911 AI Flow Demo - API Triage",
-    description="Deterministic AI triage classification",
-    version="1.0.0"
+    title="CENTINELA_CDMX_IA - A4 Triador",
+    description="Clasificación determinista de emergencias 911 CDMX — nivel 1-10",
+    version="2.0.0"
 )
 
-# CORS configuration
 cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:5678").split(",")
 app.add_middleware(
     CORSMiddleware,
@@ -40,214 +37,250 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Database configuration
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://emergency_user:changeme@postgres:5432/emergency_demo")
 
-
-# P0 Signals - CRITICAL: These MUST trigger human attention
+# ============================================================================
+# SEÑALES P0 — Ningún agente puede cerrar, degradar o descartar una llamada
+# cuando estas señales están presentes. Restricción técnica invariable.
+# ============================================================================
 P0_SIGNALS = {
-    # Weapons
-    "arma": "arma", "pistola": "arma de fuego", "cuchillo": "arma blanca", 
-    "navaja": "arma blanca", "rifle": "arma de fuego",
-    
-    # Fire/Explosion
+    # Armas
+    "arma": "arma", "pistola": "arma de fuego", "cuchillo": "arma blanca",
+    "navaja": "arma blanca", "rifle": "arma de fuego", "disparo": "arma de fuego",
+    "balacera": "arma de fuego", "balazo": "arma de fuego",
+
+    # Incendio / Explosión
     "fuego": "incendio", "incendio": "incendio", "humo": "incendio",
-    "explosión": "explosión", "bomba": "explosivo",
-    
-    # Hazmat
+    "explosión": "explosión", "explota": "explosión", "bomba": "explosivo",
+    "quemadura": "incendio",
+
+    # Materiales peligrosos
     "gas": "fuga de gas", "químico": "químico peligroso", "tóxico": "sustancia tóxica",
-    
-    # Life-threatening medical
-    "suicida": "intento suicida", "suicidio": "intento suicida", "matarme": "intento suicida",
+    "gasolina": "derrame químico",
+
+    # Emergencia médica vital
+    "suicida": "intento suicida", "suicidio": "intento suicida",
+    "matarme": "intento suicida", "quitarme la vida": "intento suicida",
     "inconsciente": "persona inconsciente", "desmayado": "persona inconsciente",
-    "no respira": "dificultad respiratoria", "dificultad respirar": "dificultad respiratoria",
-    "ahogo": "dificultad respiratoria", "sangrado": "sangrado grave", 
-    "sangre": "sangrado grave", "hemorragia": "sangrado grave",
-    
-    # Kidnapping/Violence
+    "no respira": "dificultad respiratoria", "no puede respirar": "dificultad respiratoria",
+    "dificultad respirar": "dificultad respiratoria", "ahogo": "dificultad respiratoria",
+    "asfixia": "dificultad respiratoria", "respiración agitada": "dificultad respiratoria",
+    "infarto": "emergencia cardíaca", "paro": "paro cardiorrespiratorio",
+    "sangrado": "sangrado grave", "sangre": "sangrado grave", "hemorragia": "sangrado grave",
+    "convulsión": "emergencia neurológica", "derrame": "emergencia neurológica",
+
+    # Privación de libertad / Violencia
     "secuestro": "privación de libertad", "privación libertad": "privación de libertad",
-    "retenido": "privación de libertad", "desaparición": "persona desaparecida",
-    "desaparecido": "persona desaparecida", "violación": "violencia sexual",
-    "abuso sexual": "violencia sexual",
-    
-    # Domestic/Gender violence
-    "golpes": "violencia física", "violencia familiar": "violencia familiar",
-    "mujer golpeada": "violencia contra mujer", "violencia mujer": "violencia contra mujer",
+    "persona privada de libertad": "privación de libertad",
+    "retenido": "privación de libertad", "me tienen retenido": "privación de libertad",
+    "desaparición": "persona desaparecida", "desaparecido": "persona desaparecida",
+    "violación": "violencia sexual", "abuso sexual": "violencia sexual",
+    "feminicidio": "violencia contra la mujer",
+
+    # Violencia doméstica / Género
+    "golpes": "violencia física", "me está golpeando": "violencia física",
+    "violencia familiar": "violencia familiar",
+    "mujer golpeada": "violencia contra la mujer",
+    "violencia mujer": "violencia contra la mujer",
     "niño golpeado": "maltrato infantil", "maltrato infantil": "maltrato infantil",
     "adulto mayor maltrato": "maltrato adulto mayor",
-    
-    # Vulnerable populations
+
+    # Coacción / Imposibilidad de hablar
+    "me obligan": "coacción", "coaccionado": "coacción", "no puedo hablar": "imposibilidad de hablar",
+    "están escuchando": "coacción", "alguien me controla": "coacción",
+
+    # Señales acústicas de riesgo
+    "auxilio": "solicitud de auxilio", "gritos": "señal acústica de riesgo",
+    "llanto": "señal acústica de riesgo",
+
+    # Grupos vulnerables en riesgo
     "discapacidad riesgo": "persona con discapacidad en riesgo",
-    
-    # Communication issues (potential danger)
-    "llamada silenciosa": "llamada silenciosa", "no puede hablar": "imposibilidad de hablar",
-    "gritos": "gritos de auxilio", "llanto": "llanto de auxilio", "auxilio": "solicitud de auxilio"
+    "persona mayor sola": "adulto mayor en riesgo",
 }
 
-
-# Category keywords
+# ============================================================================
+# CATEGORÍAS DE INCIDENTES
+# ============================================================================
 CATEGORY_KEYWORDS = {
     "security": [
         "robo", "asalto", "delincuente", "ladrón", "violencia", "arma",
-        "amenaza", "agresión", "pandilla", "balacera"
+        "amenaza", "agresión", "pandilla", "balacera", "extorsión"
     ],
     "medical": [
         "dolor", "herida", "sangre", "ambulancia", "enfermo", "accidente",
-        "caída", "fractura", "desmayo", "convulsión", "parto", "embarazo"
+        "caída", "fractura", "desmayo", "convulsión", "parto", "embarazo",
+        "infarto", "respirar", "inconsciente"
     ],
     "protection_civil": [
         "incendio", "inundación", "derrumbe", "gas", "árbol caído",
-        "explosión", "fuga", "terremoto", "deslizamiento"
+        "explosión", "fuga", "terremoto", "deslizamiento", "humo"
     ],
     "public_services": [
         "alumbrado", "bache", "agua", "basura", "alcantarilla",
-        "semáforo", "tráfico", "estacionamiento"
+        "semáforo", "tráfico", "estacionamiento", "poste"
     ],
     "social_support": [
         "adicción", "depresión", "orientación", "apoyo psicológico",
-        "persona en situación de calle", "abandono"
+        "persona en situación de calle", "abandono", "desorientado"
     ],
     "victim_attention": [
         "violación", "secuestro", "trata", "abuso", "extorsión",
-        "fraude", "víctima"
+        "fraude", "víctima", "feminicidio"
     ]
 }
 
-
-# NNA (Niñas, Niños, Adolescentes) keywords
+# ============================================================================
+# GRUPOS DE PROTECCIÓN REFORZADA
+# Uso: SOLO para priorización protectora. Nunca para perfilar o discriminar.
+# ============================================================================
 NNA_KEYWORDS = [
     "niño", "niña", "menor", "bebé", "adolescente", "infante",
-    "hijo", "hija", "escolar", "estudiante menor"
+    "hijo", "hija", "escolar", "estudiante menor", "recién nacido"
 ]
 
-
-# Elderly keywords
 ELDERLY_KEYWORDS = [
     "adulto mayor", "anciano", "anciana", "abuela", "abuelo",
-    "tercera edad", "persona mayor"
+    "tercera edad", "persona mayor", "de edad"
 ]
 
+DISABILITY_KEYWORDS = [
+    "discapacidad", "silla de ruedas", "no puede moverse", "ciego", "sordo",
+    "discapacitado", "no puede caminar", "no puede ver", "no puede hablar"
+]
 
-# Gender violence keywords
 GENDER_VIOLENCE_KEYWORDS = [
-    "mujer golpeada", "violencia mujer", "esposo golpea",
-    "pareja violenta", "feminicidio", "violencia género"
+    "mujer golpeada", "violencia mujer", "esposo golpea", "pareja violenta",
+    "feminicidio", "violencia género", "me golpea mi pareja", "acoso"
+]
+
+MIGRANT_KEYWORDS = [
+    "migrante", "extranjero", "no habla español", "indocumentado",
+    "deportado", "refugiado", "asilo"
+]
+
+INDIGENOUS_KEYWORDS = [
+    "indígena", "no entiende", "habla lengua", "no habla español",
+    "intérprete", "mixteco", "náhuatl", "otomí", "zapoteco"
+]
+
+LGBTTTI_KEYWORDS = [
+    "gay", "lesbiana", "transgénero", "trans ", "no binario",
+    "orientación sexual", "identidad género"
+]
+
+HOMELESS_KEYWORDS = [
+    "persona en calle", "sin hogar", "vive en la calle",
+    "deambulante", "sin techo", "indigente"
+]
+
+HUMAN_RIGHTS_KEYWORDS = [
+    "periodista", "reportero", "defensor", "activista",
+    "derechos humanos", "amenazado por denuncia"
 ]
 
 
 class TriageEngine:
-    """Deterministic triage classification engine"""
-    
+    """Motor de clasificación determinista A4 Triador"""
+
     @staticmethod
     def detect_p0_signals(text: str) -> List[str]:
-        """Detect P0 critical signals"""
         text_lower = text.lower()
         detected = []
-        
         for keyword, signal in P0_SIGNALS.items():
             if keyword in text_lower:
                 detected.append(signal)
-        
-        return list(set(detected))  # Remove duplicates
-    
+        return list(set(detected))
+
     @staticmethod
-    def detect_nna(text: str) -> bool:
-        """Detect if NNA (children/adolescents) are involved"""
+    def detect_protected_groups(text: str) -> Dict[str, bool]:
+        """
+        Detecta grupos de protección reforzada.
+        RESTRICCIÓN: Solo para priorización protectora, nunca para perfilar.
+        """
         text_lower = text.lower()
-        return any(keyword in text_lower for keyword in NNA_KEYWORDS)
-    
-    @staticmethod
-    def detect_elderly(text: str) -> bool:
-        """Detect if elderly person is involved"""
-        text_lower = text.lower()
-        return any(keyword in text_lower for keyword in ELDERLY_KEYWORDS)
-    
-    @staticmethod
-    def detect_gender_violence(text: str) -> bool:
-        """Detect gender violence indicators"""
-        text_lower = text.lower()
-        return any(keyword in text_lower for keyword in GENDER_VIOLENCE_KEYWORDS)
-    
+        return {
+            "child_or_adolescent": any(k in text_lower for k in NNA_KEYWORDS),
+            "older_adult": any(k in text_lower for k in ELDERLY_KEYWORDS),
+            "disability": any(k in text_lower for k in DISABILITY_KEYWORDS),
+            "woman": any(k in text_lower for k in GENDER_VIOLENCE_KEYWORDS),
+            "migrant_or_international_protection": any(k in text_lower for k in MIGRANT_KEYWORDS),
+            "indigenous_person": any(k in text_lower for k in INDIGENOUS_KEYWORDS),
+            "lgbttti": any(k in text_lower for k in LGBTTTI_KEYWORDS),
+            "homelessness": any(k in text_lower for k in HOMELESS_KEYWORDS),
+            "human_rights_defender": any(k in text_lower for k in HUMAN_RIGHTS_KEYWORDS),
+        }
+
     @staticmethod
     def classify_category(text: str) -> str:
-        """Classify incident category based on keywords"""
         text_lower = text.lower()
         scores = {}
-        
         for category, keywords in CATEGORY_KEYWORDS.items():
-            score = sum(1 for keyword in keywords if keyword in text_lower)
+            score = sum(1 for kw in keywords if kw in text_lower)
             if score > 0:
                 scores[category] = score
-        
-        if not scores:
-            return "unknown"
-        
-        return max(scores, key=scores.get)
-    
+        return max(scores, key=scores.get) if scores else "unknown"
+
     @staticmethod
-    def calculate_risk_level(text: str, p0_signals: List[str], nna_involved: bool) -> int:
+    def calculate_risk_level(text: str, p0_signals: List[str], groups: Dict[str, bool]) -> int:
         """
-        Calculate risk level 1-10
-        CRITICAL RULE: P0 signals ALWAYS result in risk >= 6
-        MEDIUM RISK RULE: Traffic accidents without P0 signals = level 5
+        Calcula nivel de riesgo 1-10.
+        RESTRICCIÓN TÉCNICA: P0 signals → mínimo nivel 6, invariable.
+        Matriz: Severidad 40% + Tiempo crítico 25% + Escalamiento 20% + Vulnerabilidad 15%
         """
         text_lower = text.lower()
         base_score = 1.0
-        
-        # P0 signals: MINIMUM risk level 6
+
+        # P0: mínimo 6, sin excepción
         if p0_signals:
             base_score = max(6.0, base_score)
-            base_score += len(p0_signals) * 0.5
-        
-        # NNA involvement: ALWAYS elevate
-        if nna_involved:
+            base_score += min(len(p0_signals) * 0.5, 3.0)  # cap el bonus
+
+        # NNA: siempre elevar (interés superior de la niñez)
+        if groups.get("child_or_adolescent"):
             base_score += 2.0
-        
-        # Medium risk traffic accidents (without P0 signals)
+
+        # Adulto mayor o discapacidad: elevar
+        if groups.get("older_adult") or groups.get("disability"):
+            base_score += 1.0
+
+        # Accidente vial sin P0 → nivel 5 (validación intermedia)
         traffic_keywords = [
-            "accidente", "choque", "colisión", "volcadura", "tránsito",
-            "carros chocados", "vehículo detenido", "bloqueo vial", "semáforo caído"
+            "accidente", "choque", "colisión", "volcadura",
+            "carros chocados", "vehículo detenido"
         ]
-        has_traffic_incident = any(kw in text_lower for kw in traffic_keywords)
-        
-        # If traffic incident without P0 signals, set to level 5 (mid)
-        if has_traffic_incident and not p0_signals:
+        if any(kw in text_lower for kw in traffic_keywords) and not p0_signals:
             return 5
-        
-        # Count medical keywords
+
+        # Keywords médicos
         medical_count = sum(1 for kw in CATEGORY_KEYWORDS["medical"] if kw in text_lower)
         base_score += medical_count * 0.3
-        
-        # Count security keywords
+
+        # Keywords seguridad
         security_count = sum(1 for kw in CATEGORY_KEYWORDS["security"] if kw in text_lower)
         base_score += security_count * 0.4
-        
-        # Count protection civil keywords
+
+        # Keywords protección civil
         protection_count = sum(1 for kw in CATEGORY_KEYWORDS["protection_civil"] if kw in text_lower)
         base_score += protection_count * 0.3
-        
-        # Cap at 10
+
         risk_level = min(10, int(base_score))
-        
-        # CRITICAL: Never below 6 if P0 signals present
+
+        # Garantía: P0 → nunca por debajo de 6
         if p0_signals and risk_level < 6:
             risk_level = 6
-        
+
         return risk_level
-    
+
     @staticmethod
     def determine_branch(risk_level: int) -> str:
-        """Determine branch based on risk level"""
         if risk_level <= 4:
             return "low"
         elif risk_level == 5:
             return "mid"
-        else:
-            return "critical"
-    
+        return "critical"
+
     @staticmethod
     def determine_priority(risk_level: int) -> str:
-        """Determine priority class"""
         if risk_level <= 2:
             return "minimum"
         elif risk_level <= 4:
@@ -256,65 +289,101 @@ class TriageEngine:
             return "medium"
         elif risk_level <= 7:
             return "high"
-        else:
-            return "critical"
-    
+        return "critical"
+
     @staticmethod
-    def determine_authorities(category: str, p0_signals: List[str]) -> tuple[str, List[str]]:
-        """Determine primary and support authorities"""
-        primary = "C5"
-        support = []
-        
-        if category == "medical":
-            primary = "ERUM"
-            support = ["Cruz Roja", "Protección Civil"]
-        elif category == "security":
-            primary = "SSC"
-            support = ["Fiscalía"]
-        elif category == "protection_civil":
-            primary = "Protección Civil"
-            support = ["Bomberos", "ERUM"]
-        elif category == "victim_attention":
-            primary = "Fiscalía"
-            support = ["ADEVI", "SSC"]
-        
-        # Add specialized support for P0 signals
+    def determine_authorities(category: str, p0_signals: List[str], groups: Dict[str, bool]) -> tuple:
+        """
+        Canalización con nombres reales de instituciones CDMX.
+        A7 Bravo siempre incluye legal_basis_tag — aquí definimos la base.
+        """
+        # Defaults según categoría
+        authority_map = {
+            "medical": {
+                "primary": "Secretaría de Salud CDMX / ERUM",
+                "support": ["C5/C2", "Protección Civil"]
+            },
+            "security": {
+                "primary": "SSC — Secretaría de Seguridad Ciudadana CDMX",
+                "support": ["Fiscalía General de Justicia CDMX", "C5"]
+            },
+            "protection_civil": {
+                "primary": "Protección Civil CDMX / Heroico Cuerpo de Bomberos",
+                "support": ["Secretaría de Salud CDMX", "SSC", "C5"]
+            },
+            "victim_attention": {
+                "primary": "Fiscalía General de Justicia CDMX",
+                "support": ["ADEVI — Atención a Víctimas", "SSC", "DIF-CDMX"]
+            },
+            "social_support": {
+                "primary": "SIBISO — Secretaría de Inclusión y Bienestar Social CDMX",
+                "support": ["DIF-CDMX", "Secretaría de Salud CDMX"]
+            },
+            "public_services": {
+                "primary": "Alcaldía competente / SACMEX",
+                "support": ["Protección Civil CDMX", "C5"]
+            },
+        }
+
+        result = authority_map.get(category, {
+            "primary": "C5 — Centro de Comando, Control, Cómputo, Comunicaciones y Contacto Ciudadano",
+            "support": ["SSC", "Secretaría de Salud CDMX"]
+        })
+
+        primary = result["primary"]
+        support = list(result["support"])
+
+        # Ajustes por grupos protegidos
+        if groups.get("child_or_adolescent"):
+            if "Procuraduría de Protección de NNA CDMX / DIF-CDMX" not in support:
+                support.append("Procuraduría de Protección de NNA CDMX / DIF-CDMX")
+
+        if groups.get("woman") or any("violencia" in s for s in p0_signals):
+            if "Secretaría de las Mujeres CDMX" not in support:
+                support.append("Secretaría de las Mujeres CDMX")
+
+        if groups.get("migrant_or_international_protection") or groups.get("indigenous_person"):
+            if "CDHCM — Comisión de Derechos Humanos CDMX" not in support:
+                support.append("CDHCM — Comisión de Derechos Humanos CDMX")
+
+        if groups.get("human_rights_defender"):
+            if "Mecanismo de Protección para Personas Defensoras y Periodistas" not in support:
+                support.append("Mecanismo de Protección para Personas Defensoras y Periodistas")
+
+        # Ajustes por señales P0 específicas
         if any("incendio" in s for s in p0_signals):
-            if "Bomberos" not in support:
-                support.append("Bomberos")
-        
-        if any("violencia" in s or "maltrato" in s for s in p0_signals):
-            if "ADEVI" not in support:
-                support.append("ADEVI")
-        
+            if "Heroico Cuerpo de Bomberos CDMX" not in support:
+                support.append("Heroico Cuerpo de Bomberos CDMX")
+
         return primary, support
 
 
-# Database helper
 def get_db_connection():
-    """Get database connection"""
     try:
-        conn = psycopg2.connect(DATABASE_URL)
-        return conn
+        return psycopg2.connect(DATABASE_URL)
     except Exception as e:
-        logger.error(f"Database connection error: {e}")
+        logger.error(f"Database connection error: {type(e).__name__}")
         raise HTTPException(status_code=500, detail="Database connection failed")
 
 
-# Pydantic models
 class TriageRequest(BaseModel):
     transcript: str = Field(..., min_length=1)
     call_id: str
-    trace_id: Optional[str] = None  # Optional: preserve from ingest or generate new
-    consent: bool = True
+    trace_id: Optional[str] = None
+    consent: bool = False  # SOLID: OFF por defecto — privacidad by design
     location_hint: Optional[str] = None
 
 
 class ProtectedGroupFlags(BaseModel):
-    nna_involved: bool = False
-    elderly: bool = False
+    child_or_adolescent: bool = False
+    older_adult: bool = False
     disability: bool = False
-    gender_violence: bool = False
+    woman: bool = False
+    migrant_or_international_protection: bool = False
+    indigenous_person: bool = False
+    lgbttti: bool = False
+    homelessness: bool = False
+    human_rights_defender: bool = False
 
 
 class TrustFlags(BaseModel):
@@ -350,14 +419,12 @@ class HealthResponse(BaseModel):
     timestamp: str
 
 
-# Endpoints
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
-    """Health check endpoint"""
     return {
         "status": "healthy",
         "service": "api-triage",
-        "version": "1.0.0",
+        "version": "2.0.0",
         "rules_loaded": len(P0_SIGNALS) + sum(len(v) for v in CATEGORY_KEYWORDS.values()),
         "timestamp": datetime.utcnow().isoformat() + "Z"
     }
@@ -366,92 +433,76 @@ async def health_check():
 @app.post("/triage", response_model=TriageResponse)
 async def triage_call(request: TriageRequest):
     """
-    Perform deterministic triage classification
-    CRITICAL: Never downgrade calls with P0 signals
+    Clasificación determinista A4 Triador.
+    RESTRICCIÓN TÉCNICA: Llamadas con señales P0 nunca se degradan ni cierran sin operador humano.
     """
     try:
-        # Preserve trace_id from ingest or generate new one
         trace_id = request.trace_id if request.trace_id else str(uuid.uuid4())
-        
-        # Detect P0 signals
+
+        # Detección de señales P0
         p0_signals = TriageEngine.detect_p0_signals(request.transcript)
-        
-        # Detect protected groups
-        nna_involved = TriageEngine.detect_nna(request.transcript)
-        elderly_involved = TriageEngine.detect_elderly(request.transcript)
-        gender_violence = TriageEngine.detect_gender_violence(request.transcript)
-        
-        # Calculate risk level
-        risk_level = TriageEngine.calculate_risk_level(
-            request.transcript, 
-            p0_signals, 
-            nna_involved
-        )
-        
-        # Determine branch and priority
+
+        # Detección de grupos protegidos
+        groups = TriageEngine.detect_protected_groups(request.transcript)
+
+        # Nivel de riesgo
+        risk_level = TriageEngine.calculate_risk_level(request.transcript, p0_signals, groups)
+
+        # Rama y prioridad
         branch = TriageEngine.determine_branch(risk_level)
         priority_class = TriageEngine.determine_priority(risk_level)
-        
-        # Classify category
+
+        # Categoría
         case_category = TriageEngine.classify_category(request.transcript)
-        
-        # Determine authorities
+
+        # Autoridades CDMX
         primary_authority, support_authorities = TriageEngine.determine_authorities(
-            case_category, 
-            p0_signals
+            case_category, p0_signals, groups
         )
-        
-        # Determine if human required
+
+        # ¿Requiere humano? Nivel ≥5, P0, NNA o mid siempre → sí
         human_required = (
-            risk_level >= 6 or 
-            len(p0_signals) > 0 or 
-            nna_involved or 
-            branch == "mid"
+            risk_level >= 5 or
+            len(p0_signals) > 0 or
+            groups.get("child_or_adolescent") or
+            branch in ("mid", "critical")
         )
-        
-        # Best interest of child
-        best_interest_child = nna_involved
-        
-        # Generate public communication
-        if risk_level >= 8:
-            public_phrase = "Unidad de emergencia en camino"
-        elif risk_level >= 6:
-            public_phrase = "Atención prioritaria, unidad asignada"
-        elif risk_level == 5:
-            public_phrase = "Validando información, manténgase en línea"
-        else:
-            public_phrase = "Registro realizado, se dará seguimiento"
-        
-        # Rationale
+
+        best_interest_child = groups.get("child_or_adolescent", False)
+
+        # Frase pública (protocolo de comunicación — nunca revelar cadena interna)
+        stage_map = {
+            range(1, 5): "Estoy en la etapa de recepción. Registro realizado, se dará seguimiento.",
+            range(5, 6): "Estoy en la etapa de validación. Recopilando información adicional.",
+            range(6, 9): "Estoy en la etapa de priorización. Atención prioritaria activada.",
+            range(9, 11): "Estoy en la etapa de canalización. Emergencia crítica — operador humano asignado.",
+        }
+        public_phrase = next(
+            (v for r, v in stage_map.items() if risk_level in r),
+            "Estoy en la etapa de seguimiento."
+        )
+
+        # Justificación pública (sin revelar lógica interna)
         rationale_parts = []
         if p0_signals:
-            rationale_parts.append(f"Señales P0 detectadas: {', '.join(p0_signals[:2])}")
-        if nna_involved:
-            rationale_parts.append("Menor de edad involucrado")
+            rationale_parts.append(f"Señales detectadas: {', '.join(p0_signals[:2])}")
+        if best_interest_child:
+            rationale_parts.append("Interés superior de NNA activado")
         if risk_level >= 8:
-            rationale_parts.append("Riesgo crítico")
-        
+            rationale_parts.append("Nivel crítico")
         rationale_public = "; ".join(rationale_parts) if rationale_parts else "Clasificación estándar"
-        
-        # Protected group flags
-        protected_group_flags = ProtectedGroupFlags(
-            nna_involved=nna_involved,
-            elderly=elderly_involved,
-            disability=False,  # Would need more sophisticated detection
-            gender_violence=gender_violence
-        )
-        
-        # Keywords detected (for transparency)
+
+        protected_group_flags = ProtectedGroupFlags(**groups)
+
         keywords_detected = {}
         for category, keywords in CATEGORY_KEYWORDS.items():
             found = [kw for kw in keywords if kw in request.transcript.lower()]
             if found:
-                keywords_detected[category] = found[:5]  # Limit to 5
-        
-        # Store in database
+                keywords_detected[category] = found[:5]
+
+        # Persistir en BD
         conn = get_db_connection()
         cursor = conn.cursor()
-        
         cursor.execute("""
             INSERT INTO core.triage_results
             (call_id, trace_id, risk_level, branch, priority_class, case_category,
@@ -460,30 +511,18 @@ async def triage_call(request: TriageRequest):
              rationale_public, trust_flags, p0_signals, keywords_detected)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (
-            request.call_id,
-            trace_id,
-            risk_level,
-            branch,
-            priority_class,
-            case_category,
-            Json(protected_group_flags.dict()),  # Wrap dict for JSONB
-            best_interest_child,
-            human_required,
-            primary_authority,
-            support_authorities,  # TEXT[] - no need to wrap
-            public_phrase,
-            rationale_public,
-            Json({"confidence_score": 0.85, "ambiguity_detected": False}),  # Wrap dict for JSONB
-            p0_signals,  # TEXT[] - no need to wrap
-            Json(keywords_detected)  # Wrap dict for JSONB
+            request.call_id, trace_id, risk_level, branch, priority_class,
+            case_category, Json(groups), best_interest_child, human_required,
+            primary_authority, support_authorities, public_phrase, rationale_public,
+            Json({"confidence_score": 0.85, "ambiguity_detected": False}),
+            p0_signals, Json(keywords_detected)
         ))
-        
         conn.commit()
         cursor.close()
         conn.close()
-        
-        logger.info(f"Triage completed: call_id={request.call_id}, risk={risk_level}, p0={len(p0_signals)}")
-        
+
+        logger.info(f"Triage: call_id={request.call_id}, risk={risk_level}, p0={len(p0_signals)}, groups={sum(1 for v in groups.values() if v)}")
+
         return TriageResponse(
             call_id=request.call_id,
             trace_id=trace_id,
@@ -503,22 +542,19 @@ async def triage_call(request: TriageRequest):
             p0_signals=p0_signals,
             keywords_detected=keywords_detected
         )
-        
-    except psycopg2.IntegrityError as e:
-        # Foreign key violation - call_id doesn't exist
-        logger.error(f"Integrity error in triage: call_id may not exist")
+
+    except psycopg2.IntegrityError:
+        logger.error(f"Integrity error: call_id {request.call_id} not found in raw.conversations")
         raise HTTPException(
             status_code=422,
-            detail=f"Invalid call_id: {request.call_id}. Call must be ingested first."
+            detail=f"call_id inválido: {request.call_id}. La llamada debe ser ingresada primero en api-ingest."
         )
     except Exception as e:
-        logger.error(f"Error in triage: {type(e).__name__}")
-        raise HTTPException(status_code=500, detail="Internal server error during triage")
+        logger.error(f"Error en triage: {type(e).__name__}")
+        raise HTTPException(status_code=500, detail="Error interno durante el triage")
 
 
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("SERVICE_PORT", 8002))
     uvicorn.run(app, host="0.0.0.0", port=port)
-
-# Made with Bob
