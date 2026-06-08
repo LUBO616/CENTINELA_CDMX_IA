@@ -1,5 +1,5 @@
 {
-  "name": "911 AI Flow Demo - Main",
+  "name": "CENTINELA_CDMX_IA - Flujo Principal 911",
   "nodes": [
     {
       "parameters": {
@@ -69,7 +69,7 @@
             "waitBetweenTries": 1000
           }
         },
-        "bodyParametersJson": "={{ JSON.stringify({\n  transcript: $json.redacted_text,\n  call_id: $json.call_id,\n  trace_id: $json.trace_id,\n  consent: $('Webhook 911 Call').item.json.body.solid_consent || true,\n  location_hint: $('Webhook 911 Call').item.json.body.location_hint || 'Unknown'\n}) }}"
+        "bodyParametersJson": "={{ JSON.stringify({\n  transcript: $json.redacted_text,\n  call_id: $json.call_id,\n  trace_id: $json.trace_id,\n  consent: $('Webhook 911 Call').item.json.body.solid_consent === true,\n  location_hint: $('Webhook 911 Call').item.json.body.location_hint || 'Unknown'\n}) }}"
       },
       "id": "call-api-triage",
       "name": "Call API Triage",
@@ -245,7 +245,7 @@
     "executionOrder": "v1"
   },
   "versionId": "1",
-  "id": "911-ai-flow-demo-main",
+  "id": "centinela-cdmx-ia-main",
   "meta": {
     "instanceId": "911-ai-flow-demo"
   },
