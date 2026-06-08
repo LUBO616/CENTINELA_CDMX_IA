@@ -6,7 +6,7 @@
 ## Archivos Creados
 
 ### 1. ✅ Workflow n8n JSON
-**Archivo:** `n8n/workflows/911-ai-flow-demo-main.json`
+**Archivo:** `n8n/workflows/centinela-cdmx-ia-main.json`
 
 **Características:**
 - Webhook POST `/webhook/911-call`
@@ -112,7 +112,7 @@ open http://localhost:5678
 
 ### Paso 2: Importar
 1. Menú superior derecho → "Import from File"
-2. Seleccionar: `n8n/workflows/911-ai-flow-demo-main.json`
+2. Seleccionar: `n8n/workflows/centinela-cdmx-ia-main.json`
 3. Click "Import"
 
 ### Paso 3: Activar
@@ -210,7 +210,7 @@ curl -X POST http://localhost:5678/webhook/911-call \
 ### Verificar en PostgreSQL
 ```bash
 # Contar registros
-docker exec emergency-db psql -U emergency_user -d emergency_demo -c "
+docker exec centinela-db psql -U emergency_user -d centinela_demo -c "
 SELECT 
   (SELECT COUNT(*) FROM raw.conversations) as raw,
   (SELECT COUNT(*) FROM core.triage_results) as triage,
@@ -218,7 +218,7 @@ SELECT
 "
 
 # Ver últimos incidentes
-docker exec emergency-db psql -U emergency_user -d emergency_demo -c "
+docker exec centinela-db psql -U emergency_user -d centinela_demo -c "
 SELECT 
   LEFT(incident_id::text, 8) as id,
   risk_level,
@@ -307,7 +307,7 @@ async function process911Call(transcript, location) {
 
 ### Ver Ejecuciones
 1. Ir a "Executions" en el menú lateral de n8n
-2. Filtrar por workflow "911 AI Flow Demo - Main"
+2. Filtrar por workflow "CENTINELA_CDMX_IA - Main"
 3. Ver detalles de cada ejecución
 4. Revisar flujo de datos entre nodos
 5. Identificar errores en nodos fallidos
@@ -347,13 +347,13 @@ docker ps
 **Solución:**
 ```bash
 # Verificar PostgreSQL
-docker ps | grep emergency-db
+docker ps | grep centinela-db
 
 # Revisar logs de DB
 ./scripts/03_logs.sh postgres
 
 # Verificar conexión
-docker exec emergency-db psql -U emergency_user -d emergency_demo -c "SELECT 1;"
+docker exec centinela-db psql -U emergency_user -d centinela_demo -c "SELECT 1;"
 ```
 
 ## Estado de Gate 3
