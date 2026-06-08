@@ -93,7 +93,7 @@ Respond Success (200)
   "transcript": "{{ $json.redacted_text }}",
   "call_id": "{{ $json.call_id }}",
   "trace_id": "{{ $json.trace_id }}",
-  "consent": "{{ solid_consent || true }}",
+  "consent": "{{ solid_consent === true }}",
   "location_hint": "{{ location_hint || 'Unknown' }}"
 }
 ```
@@ -285,19 +285,19 @@ curl -X POST http://localhost:5678/webhook/911-call \
 ### Verificar en PostgreSQL
 ```bash
 # Contar conversaciones raw
-docker exec emergency-db psql -U emergency_user -d emergency_demo \
+docker exec centinela-db psql -U emergency_user -d centinela_demo \
   -c "SELECT COUNT(*) FROM raw.conversations;"
 
 # Contar resultados de triage
-docker exec emergency-db psql -U emergency_user -d emergency_demo \
+docker exec centinela-db psql -U emergency_user -d centinela_demo \
   -c "SELECT COUNT(*) FROM core.triage_results;"
 
 # Contar incidentes
-docker exec emergency-db psql -U emergency_user -d emergency_demo \
+docker exec centinela-db psql -U emergency_user -d centinela_demo \
   -c "SELECT COUNT(*) FROM analytics.incidents;"
 
 # Ver últimos 5 incidentes
-docker exec emergency-db psql -U emergency_user -d emergency_demo \
+docker exec centinela-db psql -U emergency_user -d centinela_demo \
   -c "SELECT incident_id, risk_level, branch, case_category, human_required 
       FROM analytics.incidents 
       ORDER BY processed_at DESC 
@@ -326,7 +326,7 @@ curl http://localhost:8003/analytics/predictions | jq
    - Revisar logs: `./scripts/03_logs.sh api-ingest`
 
 3. **"Database connection failed"**
-   - Verificar PostgreSQL: `docker ps | grep emergency-db`
+   - Verificar PostgreSQL: `docker ps | grep centinela-db`
    - Revisar logs de DB: `./scripts/03_logs.sh postgres`
 
 4. **"Invalid JSON response"**
@@ -378,7 +378,7 @@ const response = await fetch('http://localhost:5678/webhook/911-call', {
   body: JSON.stringify({
     transcript: userInput,
     location_hint: userLocation,
-    solid_consent: true
+    solid_consent: false  // OFF por defecto — activar solo con autorización explícita
   })
 });
 
