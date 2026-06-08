@@ -1,6 +1,6 @@
 ===== N8N WEBHOOK TEST =====
 [0;34m============================================================================[0m
-[0;34m911 AI Flow Demo - Testing n8n Webhook[0m
+[0;34mCENTINELA_CDMX_IA - Testing n8n Webhook[0m
 [0;34m============================================================================[0m
 
 Checking n8n availability... [0;32m✓ OK[0m
@@ -260,8 +260,8 @@ Checking n8n availability... [0;32m✓ OK[0m
 }
 ===== DOCKER PS =====
 NAME               IMAGE                            COMMAND                  SERVICE         CREATED             STATUS                       PORTS
-api-analytics      911-ai-flow-demo-api-analytics   "uvicorn app:app --h…"   api-analytics   43 minutes ago      Up 42 minutes (healthy)      127.0.0.1:8003->8003/tcp
-api-ingest         911-ai-flow-demo-api-ingest      "uvicorn app:app --h…"   api-ingest      43 minutes ago      Up 42 minutes (healthy)      127.0.0.1:8001->8001/tcp
-api-triage         911-ai-flow-demo-api-triage      "uvicorn app:app --h…"   api-triage      18 seconds ago      Up 16 seconds (healthy)      127.0.0.1:8002->8002/tcp
-emergency-db       postgres:15-alpine               "docker-entrypoint.s…"   postgres        About an hour ago   Up About an hour (healthy)   127.0.0.1:5432->5432/tcp
+api-analytics      centinela-cdmx-ia-api-analytics   "uvicorn app:app --h…"   api-analytics   43 minutes ago      Up 42 minutes (healthy)      127.0.0.1:8003->8003/tcp
+api-ingest         centinela-cdmx-ia-api-ingest      "uvicorn app:app --h…"   api-ingest      43 minutes ago      Up 42 minutes (healthy)      127.0.0.1:8001->8001/tcp
+api-triage         centinela-cdmx-ia-api-triage      "uvicorn app:app --h…"   api-triage      18 seconds ago      Up 16 seconds (healthy)      127.0.0.1:8002->8002/tcp
+centinela-db       postgres:15-alpine               "docker-entrypoint.s…"   postgres        About an hour ago   Up About an hour (healthy)   127.0.0.1:5432->5432/tcp
 n8n-orchestrator   n8nio/n8n:latest                 "tini -- /docker-ent…"   n8n             About an hour ago   Up About an hour (healthy)   127.0.0.1:5678->5678/tcp
