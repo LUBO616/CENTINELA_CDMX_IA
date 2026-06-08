@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ============================================================================
-# 911 AI Flow Demo - Logs Script
+# CENTINELA_CDMX_IA - Logs Script
 # ============================================================================
 # This script displays logs from services
 # ============================================================================
@@ -87,7 +87,7 @@ fi
 # Map service names to container names
 case $SERVICE in
     postgres)
-        CONTAINER="emergency-db"
+        CONTAINER="centinela-db"
         ;;
     api-ingest)
         CONTAINER="api-ingest"
@@ -130,4 +130,3 @@ fi
 # Execute command
 eval $CMD
 
-# Made with Bob
