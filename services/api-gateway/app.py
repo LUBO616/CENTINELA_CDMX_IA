@@ -1,5 +1,5 @@
 """
-API Gateway - 911 AI Flow Demo
+CENTINELA_CDMX_IA - API Gateway / CORS Proxy
 Propósito: Proxy con CORS para permitir que Lovable consuma el backend local
 """
 
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 # Crear app FastAPI
 app = FastAPI(
-    title="911 AI Flow Demo - API Gateway",
+    title="CENTINELA_CDMX_IA - API Gateway",
     description="Gateway con CORS y Private Network Access para integración con Lovable",
     version="1.0.2"
 )
@@ -274,4 +274,3 @@ if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8010)
 
-# Made with Bob
