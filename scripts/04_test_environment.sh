@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ============================================================================
-# 911 AI Flow Demo - Test Environment Script
+# CENTINELA_CDMX_IA - Test Environment Script
 # ============================================================================
 # This script tests services and endpoints
 # Usage:
@@ -36,7 +36,7 @@ if [ "$MODE" != "infra" ] && [ "$MODE" != "all" ]; then
 fi
 
 echo -e "${BLUE}============================================================================${NC}"
-echo -e "${BLUE}911 AI Flow Demo - Environment Test (Mode: $MODE)${NC}"
+echo -e "${BLUE}CENTINELA_CDMX_IA - Environment Test (Mode: $MODE)${NC}"
 echo -e "${BLUE}============================================================================${NC}"
 echo ""
 
@@ -341,4 +341,3 @@ else
     exit 1
 fi
 
-# Made with Bob
