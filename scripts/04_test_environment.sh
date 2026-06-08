@@ -82,7 +82,7 @@ else
 fi
 
 # Check PostgreSQL container
-if docker ps | grep -q emergency-db; then
+if docker ps | grep -q centinela-db; then
     echo -e "${GREEN}✓ PASS${NC} PostgreSQL container is running"
     ((++TESTS_PASSED))
 else
@@ -108,7 +108,7 @@ echo -e "${CYAN}[2/6] Testing Database Connectivity and Schema${NC}"
 echo ""
 
 # Test if we can connect to PostgreSQL
-if docker exec emergency-db psql -U emergency_user -d emergency_demo -c "SELECT 1;" > /dev/null 2>&1; then
+if docker exec centinela-db psql -U emergency_user -d centinela_demo -c "SELECT 1;" > /dev/null 2>&1; then
     echo -e "${GREEN}✓ PASS${NC} PostgreSQL connection"
     ((++TESTS_PASSED))
 else
@@ -117,7 +117,7 @@ else
 fi
 
 # Test if schemas exist
-schemas_result=$(docker exec emergency-db psql -U emergency_user -d emergency_demo -t -c "SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name IN ('raw', 'core', 'analytics');" 2>/dev/null | tr -d ' ')
+schemas_result=$(docker exec centinela-db psql -U emergency_user -d centinela_demo -t -c "SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name IN ('raw', 'core', 'analytics');" 2>/dev/null | tr -d ' ')
 if [ "$schemas_result" = "3" ]; then
     echo -e "${GREEN}✓ PASS${NC} All 3 schemas exist (raw, core, analytics)"
     ((++TESTS_PASSED))
@@ -127,7 +127,7 @@ else
 fi
 
 # Test if tables exist
-tables_result=$(docker exec emergency-db psql -U emergency_user -d emergency_demo -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema IN ('raw', 'core', 'analytics') AND table_type = 'BASE TABLE';" 2>/dev/null | tr -d ' ')
+tables_result=$(docker exec centinela-db psql -U emergency_user -d centinela_demo -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema IN ('raw', 'core', 'analytics') AND table_type = 'BASE TABLE';" 2>/dev/null | tr -d ' ')
 if [ "$tables_result" = "4" ]; then
     echo -e "${GREEN}✓ PASS${NC} All 4 tables exist"
     ((++TESTS_PASSED))
@@ -137,7 +137,7 @@ else
 fi
 
 # Test if views exist
-views_result=$(docker exec emergency-db psql -U emergency_user -d emergency_demo -t -c "SELECT COUNT(*) FROM information_schema.views WHERE table_schema = 'analytics';" 2>/dev/null | tr -d ' ')
+views_result=$(docker exec centinela-db psql -U emergency_user -d centinela_demo -t -c "SELECT COUNT(*) FROM information_schema.views WHERE table_schema = 'analytics';" 2>/dev/null | tr -d ' ')
 if [ "$views_result" = "3" ]; then
     echo -e "${GREEN}✓ PASS${NC} All 3 analytics views exist"
     ((++TESTS_PASSED))
