@@ -1,8 +1,8 @@
-# Integración con Lovable - 911 AI Flow Demo
+# Integración con Lovable - CENTINELA_CDMX_IA
 
 ## Descripción General
 
-Este documento explica cómo integrar el dashboard de Lovable con el backend 911 AI Flow Demo. Incluye configuración de variables de entorno, ejemplos de payloads, sugerencias de componentes UI, y consideraciones de CORS.
+Este documento explica cómo integrar el dashboard de Lovable con el backend CENTINELA_CDMX_IA. Incluye configuración de variables de entorno, ejemplos de payloads, sugerencias de componentes UI, y consideraciones de CORS.
 
 **⚠️ Importante:** Este es un MVP educativo. No usar para emergencias reales.
 
@@ -342,7 +342,7 @@ async function handleSubmit(transcript: string, location: string) {
     const result = await submitEmergencyCall({
       transcript,
       location_hint: location,
-      solid_consent: true,
+      solid_consent: false,
     });
 
     console.log('Call processed:', result);
@@ -577,7 +577,7 @@ export function EmergencyCallForm() {
       const response = await submitEmergencyCall({
         transcript,
         location_hint: location,
-        solid_consent: true,
+        solid_consent: false,
       });
       setResult(response);
     } catch (error) {
@@ -963,7 +963,7 @@ export function QuickTestButtons() {
     const result = await submitEmergencyCall({
       transcript: testCase.transcript,
       location_hint: testCase.location,
-      solid_consent: true,
+      solid_consent: false,
     });
     console.log('Test result:', result);
   };
