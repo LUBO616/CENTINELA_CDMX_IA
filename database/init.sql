@@ -1,4 +1,4 @@
--- 911 AI Flow Demo - Database Initialization
+-- CENTINELA_CDMX_IA - Inicialización de base de datos
 -- PostgreSQL 15+ required
 -- Creates schemas and tables for the emergency demo system
 
@@ -257,4 +257,3 @@ WHERE schemaname IN ('raw', 'core', 'analytics')
 GROUP BY schemaname
 ORDER BY schemaname;
 
--- Made with Bob
