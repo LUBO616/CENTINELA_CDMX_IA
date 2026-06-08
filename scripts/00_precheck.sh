@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ============================================================================
-# 911 AI Flow Demo - Pre-flight Check Script
+# CENTINELA_CDMX_IA - Pre-flight Check Script
 # ============================================================================
 # This script verifies that all prerequisites are met before starting the system
 # ============================================================================
@@ -20,7 +20,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 echo -e "${BLUE}============================================================================${NC}"
-echo -e "${BLUE}911 AI Flow Demo - Pre-flight Check${NC}"
+echo -e "${BLUE}CENTINELA_CDMX_IA - Pre-flight Check${NC}"
 echo -e "${BLUE}============================================================================${NC}"
 echo ""
 
@@ -208,4 +208,3 @@ else
     exit 1
 fi
 
-# Made with Bob
