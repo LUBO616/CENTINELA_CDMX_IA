@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ============================================================================
-# 911 AI Flow Demo - Test n8n Webhook Script
+# CENTINELA_CDMX_IA - Test n8n Webhook Script
 # ============================================================================
 # This script tests the n8n webhook with 3 scenarios
 # Prerequisites: n8n workflow must be imported and active
@@ -26,7 +26,7 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 WEBHOOK_URL="http://localhost:5678/webhook/911-call"
 
 echo -e "${BLUE}============================================================================${NC}"
-echo -e "${BLUE}911 AI Flow Demo - Testing n8n Webhook${NC}"
+echo -e "${BLUE}CENTINELA_CDMX_IA - Testing n8n Webhook${NC}"
 echo -e "${BLUE}============================================================================${NC}"
 echo ""
 
