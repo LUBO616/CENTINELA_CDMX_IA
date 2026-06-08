@@ -1,545 +1,393 @@
-# Arquitectura del Sistema - 911 AI Flow Demo
+# Arquitectura del Sistema — CENTINELA_CDMX_IA
 
-## Descripción General
-
-**911 AI Flow Demo** es un sistema de demostración educativa que simula el flujo de procesamiento de llamadas de emergencia 911 con asistencia de IA determinista. El sistema está diseñado con arquitectura de microservicios, orquestación mediante n8n, y almacenamiento en PostgreSQL con separación lógica de datos.
+> Documento técnico · Versión 4.0 · Junio 2026
 
 ---
 
-## Diagrama de Arquitectura General
+## Principios de diseño
 
-```mermaid
-graph TB
-    subgraph "Frontend Layer"
-        A[Lovable Dashboard<br/>React/TypeScript]
-    end
-    
-    subgraph "Orchestration Layer"
-        B[n8n Orchestrator<br/>:5678]
-    end
-    
-    subgraph "Microservices Layer"
-        C[api-ingest<br/>:8001<br/>Redacción PII]
-        D[api-triage<br/>:8002<br/>Clasificación IA]
-        E[api-analytics<br/>:8003<br/>Métricas]
-    end
-    
-    subgraph "Data Layer"
-        F[(PostgreSQL<br/>:5432)]
-        G[Schema: raw<br/>conversations]
-        H[Schema: core<br/>triage_results]
-        I[Schema: analytics<br/>incidents]
-    end
-    
-    A -->|POST /webhook/911-call| B
-    B -->|1. POST /raw-conversations| C
-    C -->|Store| G
-    B -->|2. POST /triage| D
-    D -->|Store| H
-    B -->|3. POST /incidents| E
-    E -->|Store| I
-    B -->|Consolidated Response| A
-    A -->|GET /analytics/summary| E
-    A -->|GET /analytics/predictions| E
-    
-    F --> G
-    F --> H
-    F --> I
+El sistema fue diseñado desde cero con estas restricciones no negociables:
+
+| # | Principio | Implementación técnica |
+|---|---|---|
+| **P0** | Vida, integridad y libertad prevalecen sobre automatización o eficiencia estadística | Restricción en cada agente: ninguno puede cerrar, degradar o canalizar autónomamente |
+| **P1** | El operador humano tiene la decisión final | Nivel ≥5 requiere intervención humana o registro explícito de causa para cerrarse |
+| **P2** | Seguridad de datos > funcionalidad | PII se redacta en A1 antes de que cualquier otro componente acceda al contenido |
+| **P3** | Honestidad de arquitectura | Si un componente canónico no aporta valor a un agente, se declara `none` con justificación — nunca se añade por simetría |
+| **P4** | Solo herramientas abiertas, enlazables en tiempo real | Stack 100% open source, sin dependencias de APIs externas en runtime |
+| **P5** | Equidad geográfica medible | Riesgo normalizado por población INEGI 2020 · Gini 0.28 verificable |
+| **P6** | Incremental y verificable | Cada agente define `test()` sin red externa antes de integrarse al sistema |
+
+---
+
+## Visión general del sistema
+
+CENTINELA se inserta en el flujo operativo del 911 como capa de inteligencia de asistencia. El flujo del operador es invariable — la IA trabaja en paralelo y enriquece las decisiones sin alterar la cadena de mando.
+
+```
+Llamada 911
+    │
+    ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│  CAPA 0 — Redacción automática de PII (primera operación del sistema)│
+│  A1 Recolector — Nombre · teléfono · dirección · datos de salud      │
+│  → [REDACTADO] antes de cualquier procesamiento posterior            │
+│  LFPDPPP Art. 11 · minimización de datos                            │
+└──────────────────────────────────────────────────────────────────────┘
+    │
+    ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│  CAPA 1 — Coordinación maestra · A7 Bravo · n8n · Redis Streams      │
+│  Orquesta A1–A6 · fallo de agente → escala a humano                 │
+│  Sin agencia autónoma · trace_id global                              │
+└──────────────────────────────────────────────────────────────────────┘
+    │
+    ├─────────────────────────────────────────────────────────────────┐
+    │  CAPA 2 — Camino caliente (tiempo real, por llamada)            │
+    │                                                                  │
+    │  [A1 Recolector]                                                 │
+    │  Ingesta · STT en vivo · valida schema canónico                 │
+    │  Out: rows · schema_ok · transcript · caller_context_flags       │
+    │                                                                  │
+    │  [A3 Centinela]          [A2 Correlador]                        │
+    │  wav2vec2 + AASIST3      Caza duplicados · geo-temporal         │
+    │  Deepfake · voz sintética Detecta inundación coordinada         │
+    │  Out: synthetic_prob      Out: trust_score · is_nonproc          │
+    │  ⚠ HiL si synthetic alto                                        │
+    │                  └──────────────┘                               │
+    │                         │                                        │
+    │                         ▼                                        │
+    │  [A4 Triador] — Triage 1–10                                     │
+    │  Consume trust_score A2 + synthetic_prob A3                     │
+    │  NNA → best_interest_child · nivel ≥9 → HiL obligatorio         │
+    │                                                                  │
+    │  ┌─────────────────────────────────────────────────────────┐    │
+    │  │  Restricción técnica invariable:                         │    │
+    │  │  Ningún agente puede cerrar, degradar o derivar          │    │
+    │  │  una llamada de forma autónoma.                          │    │
+    │  │  Nivel ≥5 → Human-in-the-Loop obligatorio               │    │
+    │  └─────────────────────────────────────────────────────────┘    │
+    └─────────────────────────────────────────────────────────────────┘
+    │
+    │  Gate SOLID — Consentimiento LFPDPPP Art. 8
+    │  ¿Ciudadano autoriza PII?
+    │  Sí → remite a autoridad con base legal documentada
+    │  No → atiende sin compartir datos
+    │
+    ├─────────────────────────────────────────────────────────────────┐
+    │  CAPA 3 — Analítica near-real-time (ventanas de minutos)        │
+    │                                                                  │
+    │  [A5 Cartógrafo]              [A6 Estratega]                    │
+    │  Hotspots H3 + PostGIS        OR-Tools — cobertura              │
+    │  Normalizado INEGI 2020       Pre-posiciona unidades            │
+    │  LLM: none (determinista)     LLM: mínimo (explica)             │
+    │  Gini 0.28 · equidad geo.     Out: placements · minutos         │
+    └─────────────────────────────────────────────────────────────────┘
+    │
+    ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│  CAPA 4 — Gobernanza activa · A8 Auditor (obligatorio en producción) │
+│  Equidad por alcaldía · sesgo A3 · FNR · falsos negativos P0         │
+│  Disparidad NNA · violencia de género · llamadas silenciosas         │
+│  Job semanal n8n · NIST AI RMF MEASURE                              │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Flujo de Datos Completo
+## Estructura interna canónica
 
-```mermaid
-sequenceDiagram
-    participant L as Lovable
-    participant N as n8n
-    participant I as api-ingest
-    participant T as api-triage
-    participant A as api-analytics
-    participant DB as PostgreSQL
-    
-    L->>N: POST /webhook/911-call<br/>{transcript, location}
-    
-    Note over N: Validate payload
-    
-    N->>I: POST /raw-conversations<br/>{transcript, metadata}
-    I->>I: Redact PII<br/>(phones, emails, names, addresses)
-    I->>DB: INSERT INTO raw.conversations
-    I-->>N: {call_id, trace_id, redacted_text}
-    
-    N->>T: POST /triage<br/>{redacted_text, call_id, trace_id}
-    T->>T: Detect P0 signals<br/>Calculate risk_level<br/>Detect NNA/vulnerable groups
-    T->>DB: INSERT INTO core.triage_results
-    T-->>N: {risk_level, branch, category,<br/>human_required, p0_signals}
-    
-    N->>A: POST /incidents<br/>{call_id, trace_id, risk_level, branch}
-    A->>A: Normalize location<br/>(privacy by design)
-    A->>DB: INSERT INTO analytics.incidents
-    A-->>N: {incident_id, stored_at}
-    
-    N->>N: Consolidate response
-    N-->>L: {success, call_id, trace_id,<br/>risk_level, branch, authorities,<br/>incident_id, public_phrase}
-    
-    L->>A: GET /analytics/summary
-    A->>DB: Query aggregated metrics
-    A-->>L: {total_incidents, by_risk, by_branch}
-    
-    L->>A: GET /analytics/predictions
-    A->>DB: Query historical patterns
-    A-->>L: {volume_forecast, category_dist, risk_zones}
+Cada agente del sistema implementa seis componentes. Si un componente no aporta valor en un agente específico, se declara `mínimo` (presente pero trivial) o `none (justificación)` — nunca se añade por simetría formal.
+
+| Componente | Descripción | Implementación de referencia |
+|---|---|---|
+| **Núcleo** | Motor de razonamiento del agente | LLM local (Ollama + cualquier modelo) por defecto; red neuronal o solver donde el LLM no aporta |
+| **RAG** | Recuperación de documentos relevantes | Qdrant + embeddings abiertos (nomic-embed / bge) |
+| **Memoria** | Estado entre llamadas y sesiones | BeeAI nativa (summarized / token-controlled) |
+| **Planificación** | Descomposición de la tarea en subtareas | Expuesto en la traza de cada llamada |
+| **Herramientas** | Programas que el agente acciona | Tools MCP en Python (BaseMCP sobre BeeAI) |
+| **Interfaz** | Entrada y salida del agente | Bus de eventos Redis Streams / agente upstream — nunca el usuario final directamente |
+
+---
+
+## Especificación por agente
+
+### A1 — Recolector · Data Steward
+
+**Responsabilidad:** Primera operación del sistema. Transcribe el audio, redacta PII, valida el schema canónico y detecta señales de contexto del llamante.
+
+| Componente | Implementación |
+|---|---|
+| Núcleo | LLM mínimo (solo desambigua mapeo de campo) · validación determinista |
+| RAG | Diccionario de datos C5 + esquema canónico · catálogo de señales de contexto |
+| Memoria | Cursores/offsets · hashes de lotes · desfases creación-cierre |
+| Planificación | Recibir stream → transcribir → redactar PII → validar vs. esquema → emitir |
+| Herramientas | faster-whisper / Vosk (STT) · conector CSV/PostGIS · validador de esquema |
+| Interfaz | Bus Redis Streams → A2, A3 en paralelo |
+
+**Output:**
+```json
+{
+  "rows": "int",
+  "schema_ok": "bool",
+  "warnings": ["str"],
+  "table_ref": "str",
+  "transcript": "str",
+  "caller_context_flags": {
+    "child_or_adolescent": "bool|null",
+    "woman": "bool|null",
+    "older_adult": "bool|null",
+    "disability": "bool|null",
+    "migrant_or_international_protection": "bool|null",
+    "indigenous_person": "bool|null"
+  },
+  "medical_red_flags": ["str"],
+  "violence_red_flags": ["str"],
+  "environmental_red_flags": ["str"],
+  "speech_constraints": ["silent|whisper|third_party_control|hangup|panic|language_barrier"]
+}
 ```
 
 ---
 
-## Componentes del Sistema
+### A2 — Correlador · Correlación
 
-### 1. Lovable Dashboard (Frontend)
+**Responsabilidad:** Detectar si la llamada es duplicado del mismo evento o probable no-procedente. No puede reducir el nivel de riesgo cuando A1 o A4 detecten señales P0.
 
-**Tecnología:** React + TypeScript + Vite
+| Componente | Implementación |
+|---|---|
+| Núcleo | LLM para similitud semántica del motivo de llamada |
+| RAG | Catálogo de motivos/sinónimos + patrones de no-procedente |
+| Memoria | Ventana deslizante de incidentes recientes (vectores en Qdrant) |
+| Planificación | Clasificar no-proc → buscar vecinos geo-temporales → asignar cluster |
+| Herramientas | Qdrant · índice geoespacial · reloj de ventana temporal |
+| Interfaz | Bus Redis Streams → A4 |
 
-**Responsabilidades:**
-- Interfaz de usuario para simular llamadas 911
-- Captura de transcript y ubicación
-- Envío de llamadas al webhook n8n
-- Visualización de resultados (risk_level, branch, authorities)
-- Dashboard de analytics (métricas, predicciones, mapas de calor)
+**Output:**
+```json
+{
+  "incident_id": "str",
+  "is_nonproc": "bool",
+  "duplicate_of": "str|null",
+  "cluster_id": "str",
+  "trust_score": "float"
+}
+```
 
-**Endpoints Consumidos:**
-- `POST http://localhost:5678/webhook/911-call`
-- `GET http://localhost:8003/analytics/summary`
-- `GET http://localhost:8003/analytics/predictions`
+**Restricción crítica:** A2 detecta duplicidad o posible improcedencia, pero **no puede disminuir riesgo** cuando A1 o A4 detecten señales P0. Toda llamada posiblemente falsa con señales de vida, salud, violencia o grupo protegido pasa a revisión humana.
 
 ---
 
-### 2. n8n Orchestrator
+### A3 — Centinela · Detección de Deepfake
 
-**Tecnología:** n8n (Node.js)
+**Responsabilidad:** Detectar voz sintética o deepfake de audio. Es el único agente del sistema que usa una red neuronal de audio en lugar de un LLM.
 
-**Puerto:** 5678
+| Componente | Implementación |
+|---|---|
+| Núcleo | **Red neuronal de audio** — NO LLM · wav2vec2/WavLM (front-end SSL) → AASIST3 (back-end KAN-enhanced) · LLM solo como capa de explicación opcional |
+| RAG | Firmas de motores TTS/VC conocidos · codecs · notas de distribución de entrenamiento |
+| Memoria | Veredictos por sesión/origen para detectar inundación automatizada |
+| Planificación | Extraer features → inferir synthetic_prob → aplicar umbral → alertar operador |
+| Herramientas | Checkpoint AASIST3 (HuggingFace) · extractor de features · conector al bus |
+| Interfaz | Bus Redis Streams → A4 |
 
-**Responsabilidades:**
-- Recibir llamadas vía webhook POST `/webhook/911-call`
-- Validar payload (transcript requerido)
-- Orquestar flujo secuencial: ingest → triage → analytics
-- Manejar errores y reintentos (máximo 2)
-- Consolidar respuesta de los 3 servicios
-- Responder al cliente con JSON unificado
+**Distribución de entrenamiento requerida:** ASVspoof5 / Codecfake / in-the-wild — ASVspoof 2019 no es suficiente para voz sintética moderna.
 
-**Workflow:**
+**Output:**
+```json
+{
+  "call_id": "str",
+  "synthetic_prob": "float",
+  "decision": "human|synthetic|uncertain",
+  "model_version": "str",
+  "train_distribution": "str",
+  "operating_point": {
+    "fpr": "float",
+    "fnr": "float"
+  }
+}
 ```
-Webhook → Validate → Ingest → Triage → Analytics → Consolidate → Respond
-              ↓
-          (invalid)
-              ↓
-        Error Response
-```
 
-**Configuración:**
-- Timeouts: 10-15 segundos por servicio
-- Reintentos: 2 intentos con 1 segundo de espera
-- CORS: Habilitado para localhost:3000 y localhost:5678
-- Autenticación: Basic Auth (admin/changeme)
+**Restricción crítica:** La detección de voz sintética, deepfake o automatización **nunca autoriza el descarte** de una llamada. Solo produce una bandera para revisión humana, protección del sistema y correlación de patrones de inundación.
+
+**Referencias académicas:**
+- Jung et al. (2022) — AASIST: Audio Anti-Spoofing Using Integrated Spectro-Temporal Graph Attention Networks — [arXiv:2110.01200](https://arxiv.org/abs/2110.01200)
+- AASIST3: KAN-Enhanced AASIST para ASVspoof 2024 — [arXiv:2408.17352](https://arxiv.org/pdf/2408.17352)
 
 ---
 
-### 3. api-ingest (Microservicio de Ingesta)
+### A4 — Triador · Triage 1–10
 
-**Tecnología:** FastAPI + Python 3.11
+**Responsabilidad:** Sugerir al operador el nivel de riesgo, la rama de atención, los grupos vulnerables involucrados y la autoridad competente. El operador confirma o corrige.
 
-**Puerto:** 8001
+| Componente | Implementación |
+|---|---|
+| Núcleo | LLM razona severidad desde transcripción + clasificación + trust_score de A2 + synthetic_prob de A3 |
+| RAG | Protocolos de priorización · mapa clasificación→gravedad · categorías médicas · grupos protegidos |
+| Memoria | Decisiones previas similares para consistencia de criterio |
+| Planificación | Reunir señales → calcular severidad → asignar rama 1–4 / 5 / 6–10 |
+| Herramientas | Motor de reglas + scorer ponderado |
+| Interfaz | Bus Redis Streams → A7 Bravo |
 
-**Responsabilidades:**
-- Recibir transcript original de llamada
-- **Redactar PII** antes de almacenar:
-  - Teléfonos → `[PHONE_REDACTED]`
-  - Emails → `[EMAIL_REDACTED]`
-  - Nombres propios → `[NAME_REDACTED]`
-  - Direcciones con número → `[ADDRESS_REDACTED]`
-- Generar `call_id` (UUID único)
-- Generar `trace_id` (UUID único para trazabilidad)
-- Almacenar en `raw.conversations`
-- **NUNCA guardar transcript original sin redactar**
-
-**Endpoints:**
-- `POST /raw-conversations` - Ingestar nueva llamada
-- `GET /raw-conversations` - Listar llamadas (paginado)
-- `GET /health` - Health check
-
-**Algoritmo de Redacción:**
-```python
-1. Detectar teléfonos (regex: \d{10}, \d{3}-\d{3}-\d{4})
-2. Detectar emails (regex: \S+@\S+\.\S+)
-3. Detectar nombres propios (heurística: palabras capitalizadas)
-4. Detectar direcciones (regex: calle/avenida + número)
-5. Reemplazar con tokens de redacción
-6. Guardar resumen de redacción en metadata
+**Matriz de cálculo:**
+```
+Nivel de riesgo = 
+  0.40 × Severidad material del hecho +
+  0.25 × Tiempo crítico de atención +
+  0.20 × Riesgo de escalamiento +
+  0.15 × Vulnerabilidad e interseccionalidad
 ```
 
----
-
-### 4. api-triage (Microservicio de Clasificación)
-
-**Tecnología:** FastAPI + Python 3.11
-
-**Puerto:** 8002
-
-**Responsabilidades:**
-- Recibir texto **redactado** de api-ingest
-- Detectar **señales P0** (60+ keywords críticos)
-- Calcular `risk_level` (1-10)
-- Determinar `branch` (low/mid/critical)
-- Determinar `priority_class` (minimum/low/medium/high/critical)
-- Clasificar `case_category` (security/medical/protection_civil/etc.)
-- Detectar grupos vulnerables (NNA, adultos mayores, discapacidad)
-- Activar `best_interest_child` si hay NNA
-- Determinar `human_required` (true si risk >= 6 o P0 o NNA)
-- Sugerir `primary_authority` y `support_authorities`
-- Generar `public_stage_phrase` y `rationale_public`
-- Almacenar en `core.triage_results`
-
-**Endpoints:**
-- `POST /triage` - Clasificar llamada
-- `GET /health` - Health check
-
-**Matriz de Riesgo:**
-
-| Risk Level | Branch | Descripción | Acción |
-|------------|--------|-------------|--------|
-| 1-4 | low | Servicios públicos, orientación | Registro y seguimiento |
-| 5 | mid | Accidentes sin P0, validación | Atención humana media |
-| 6-10 | critical | Señales P0, NNA, emergencias | Atención humana inmediata |
-
-**Señales P0 (Prioridad 0):**
-- Armas (pistola, cuchillo, rifle)
-- Fuego/Explosión (incendio, bomba, gas)
-- Médico crítico (inconsciente, sangrado, no respira)
-- Violencia (secuestro, violación, maltrato)
-- Grupos vulnerables en peligro (niño, adulto mayor)
-- Comunicación comprometida (llamada silenciosa, gritos)
-
-**Regla Crítica:**
-```
-SI hay señales P0 → risk_level >= 6 SIEMPRE
-SI hay NNA → best_interest_child = true
-SI risk >= 6 O P0 O NNA → human_required = true
-NUNCA degradar llamadas con P0
+**Output:**
+```json
+{
+  "incident_id": "str",
+  "risk_level": "int 1-10",
+  "branch": "low|mid|critical",
+  "priority_class": "minimum|low|medium|high|critical",
+  "risk_components": {
+    "severity": "float",
+    "time_criticality": "float",
+    "escalation_probability": "float",
+    "vulnerability": "float"
+  },
+  "protected_group_flags": ["str"],
+  "best_interest_child": "bool",
+  "medical_category": "cardiorespiratory|neurological|trauma|toxicological|obstetric|mental_health|environmental|general|none|unknown",
+  "case_category": "security|medical|protection_civil|public_services|social_support|victim_attention|unknown",
+  "primary_authority": "str",
+  "support_authorities": ["str"],
+  "human_required": "bool",
+  "public_stage_phrase": "str",
+  "rationale_public": "str",
+  "trust_flags": ["str"]
+}
 ```
 
 ---
 
-### 5. api-analytics (Microservicio de Analítica)
+### A5 — Cartógrafo · Geo-temporal
 
-**Tecnología:** FastAPI + Python 3.11
+**Responsabilidad:** Generar mapa de hotspots geoespaciales normalizados por población INEGI 2020 para el panel de supervisión.
 
-**Puerto:** 8003
+| Componente | Implementación |
+|---|---|
+| Núcleo | **Analítica determinista** (H3 + PostGIS) · LLM: `none` — no aporta a clustering geoespacial |
+| RAG | Histórico agregado de incidentes + capas censales INEGI 2020 |
+| Memoria | Baselines por hexágono H3 · ventanas temporales previas (TimescaleDB) |
+| Planificación | Indexar lat/long a H3 → descomponer temporal → normalizar por población |
+| Herramientas | H3 (Uber, Apache 2.0) · PostGIS · TimescaleDB |
+| Interfaz | Bus Redis Streams → A6 Estratega · Dashboard |
 
-**Responsabilidades:**
-- Recibir incidentes clasificados de api-triage
-- **Normalizar ubicaciones** (privacy by design):
-  - "Calle Madero 45" → "Centro"
-  - "Insurgentes 123" → "Zona simulada"
-- Almacenar en `analytics.incidents`
-- Calcular métricas agregadas:
-  - Total de incidentes
-  - Distribución por risk_level
-  - Distribución por branch
-  - Distribución por case_category
-  - Conteo de human_required
-  - Conteo de P0 signals
-  - Conteo de NNA involucrados
-- Generar predicciones mock:
-  - Volumen forecast (por hora)
-  - Distribución de categorías
-  - Zonas de riesgo (generalizadas)
+**Output:**
+```json
+{
+  "hotspots": [{"h3": "str", "risk_norm": "float", "raw_count": "int"}],
+  "peaks": [{"dim": "hora|dia", "value": "str", "intensity": "float"}]
+}
+```
 
-**Endpoints:**
-- `POST /incidents` - Registrar incidente
-- `GET /incidents` - Listar incidentes (paginado)
-- `GET /analytics/summary` - Métricas agregadas
-- `GET /analytics/predictions` - Predicciones mock
-- `GET /health` - Health check
+**Datos de referencia:** ITER_09CSV20.csv — Censo de Población y Vivienda INEGI 2020, Ciudad de México, 9,209,944 habitantes, desagregado por entidad/municipio/localidad.
 
-**Normalización de Ubicaciones:**
-```python
-Entrada: "Calle Madero 45, Colonia Centro"
-Proceso:
-  1. Detectar colonia/alcaldía conocida → "Centro"
-  2. Si tiene número de calle → "Zona simulada"
-  3. Si es calle principal sin número → "Zona {calle}"
-  4. Default → "Zona simulada"
-Salida: "Centro"
+---
+
+### A6 — Estratega · Optimización
+
+**Responsabilidad:** Sugerir pre-posicionamiento de unidades y proyectar minutos de respuesta ganados.
+
+| Componente | Implementación |
+|---|---|
+| Núcleo | **Solver de optimización** (OR-Tools, Apache 2.0) · LLM mínimo (explica la recomendación) |
+| RAG | Restricciones operativas + capacidades de unidades |
+| Memoria | Asignaciones previas y su resultado real (retroalimentación para mejora) |
+| Planificación | Leer hotspots A5 → formular problema de cobertura → resolver → proyectar |
+| Herramientas | OR-Tools · PostGIS |
+| Interfaz | Bus Redis Streams → Dashboard · A7 Bravo |
+
+**Output:**
+```json
+{
+  "placements": [{"lat": "float", "lng": "float", "covers_h3": ["str"]}],
+  "projected_minutes_saved": "float",
+  "assumptions": ["str"]
+}
 ```
 
 ---
 
-### 6. PostgreSQL (Base de Datos)
+### A7 — Bravo · Coordinador maestro
 
-**Tecnología:** PostgreSQL 15
+**Responsabilidad:** Orquestar A1–A6, producir el payload consolidado con `trace_id`, e impedir que una llamada de nivel ≥5 se cierre sin intervención del operador.
 
-**Puerto:** 5432
+| Componente | Implementación |
+|---|---|
+| Núcleo | LLM para ruteo y manejo de excepciones del flujo |
+| RAG | Definición del flujo operativo + SOPs + matriz de canalización por autoridad |
+| Memoria | Estado de cada incidente en vuelo + traza global |
+| Planificación | Plan maestro — descompone el flujo en llamadas a A1–A6 |
+| Herramientas | n8n (webhooks) · bus Redis Streams/Valkey · clientes MCP de todos los agentes |
+| Interfaz | Panel del operador · autoridades competentes (con autorización SOLID) |
 
-**Responsabilidades:**
-- Almacenamiento persistente de todos los datos
-- Separación lógica mediante schemas
-- Vistas para consultas optimizadas
-- Índices para performance
+**Output:** Payload consolidado + `trace_id` + `primary_authority` + `coordinating_authority` + `support_authorities` + `legal_basis_tag`
 
-**Schemas:**
-
-#### Schema: `raw`
-**Propósito:** Datos crudos redactados
-
-**Tabla: `conversations`**
-```sql
-- call_id (UUID, PK)
-- trace_id (UUID, unique)
-- redacted_text (TEXT) -- Texto con PII redactada
-- original_transcript (TEXT) -- SIEMPRE '[NOT_STORED_PRIVACY_BY_DESIGN]'
-- redaction_summary (JSONB) -- Qué se redactó
-- metadata (JSONB)
-- timestamp (TIMESTAMPTZ)
-```
-
-#### Schema: `core`
-**Propósito:** Resultados de clasificación
-
-**Tabla: `triage_results`**
-```sql
-- triage_id (UUID, PK)
-- call_id (UUID, FK → raw.conversations)
-- trace_id (UUID)
-- risk_level (INTEGER 1-10)
-- branch (TEXT: low/mid/critical)
-- priority_class (TEXT)
-- case_category (TEXT)
-- medical_category (TEXT, nullable)
-- protected_group_flags (JSONB)
-- best_interest_child (BOOLEAN)
-- human_required (BOOLEAN)
-- primary_authority (TEXT)
-- support_authorities (TEXT[])
-- public_stage_phrase (TEXT)
-- rationale_public (TEXT)
-- trust_flags (JSONB)
-- p0_signals (TEXT[])
-- keywords_detected (JSONB)
-- timestamp (TIMESTAMPTZ)
-```
-
-#### Schema: `analytics`
-**Propósito:** Métricas y análisis
-
-**Tabla: `incidents`**
-```sql
-- incident_id (UUID, PK)
-- call_id (UUID, FK → raw.conversations)
-- trace_id (UUID)
-- risk_level (INTEGER)
-- branch (TEXT)
-- case_category (TEXT)
-- human_required (BOOLEAN)
-- has_p0_signals (BOOLEAN)
-- location_hint (TEXT) -- Normalizado, no direcciones completas
-- processed_at (TIMESTAMPTZ)
-- timestamp (TIMESTAMPTZ)
-```
-
-**Vistas:**
-- `v_risk_distribution` - Distribución de riesgo
-- `v_category_trends` - Tendencias por categoría
-- `v_hourly_patterns` - Patrones por hora
+**Restricción crítica:** A7 debe impedir que una llamada de nivel 5 o superior se cierre sin intervención humana o registro de causa operativa.
 
 ---
 
-## Flujos de Casos de Uso
+### A8 — Auditor · Gobernanza (obligatorio en producción)
 
-### Caso 1: Llamada de Bajo Riesgo (Low)
+**Responsabilidad:** Auditoría semanal de equidad, sesgo y falsos negativos.
 
-```mermaid
-graph LR
-    A[Usuario reporta bache] --> B[Lovable captura transcript]
-    B --> C[n8n webhook]
-    C --> D[api-ingest redacta PII]
-    D --> E[api-triage: risk=2, branch=low]
-    E --> F[api-analytics: normaliza ubicación]
-    F --> G[Respuesta: orientación y registro]
-    G --> H[Dashboard muestra: low risk, no urgente]
-```
-
-**Características:**
-- risk_level: 1-4
-- branch: "low"
-- human_required: false
-- p0_signals: []
-- Acción: Registro y seguimiento no urgente
+| Auditoría | Métrica |
+|---|---|
+| Disparidad geográfica | Distribución de riesgo por alcaldía vs. población INEGI |
+| Disparidad por tipo de incidente | Variaciones en clasificación por categoría |
+| Disparidad por grupo protegido | Tasas de clasificación por grupo de protección reforzada |
+| Falsos negativos médicos | Casos médicos graves clasificados con nivel bajo |
+| Falsos negativos violencia de género | Casos de violencia contra mujeres sub-clasificados |
+| Falsos negativos NNA | Casos con NNA involucrados sin activación de `best_interest_child` |
+| Llamadas silenciosas cerradas | Llamadas sin respuesta verbal que cerraron sin revisión humana |
+| Casos degradados por A2 o A3 | Niveles reducidos por el Correlador o Centinela |
 
 ---
 
-### Caso 2: Llamada de Riesgo Medio (Mid)
+## Orquestación n8n — Workflows
 
-```mermaid
-graph LR
-    A[Accidente de tránsito sin heridos] --> B[Lovable captura]
-    B --> C[n8n webhook]
-    C --> D[api-ingest redacta]
-    D --> E[api-triage: risk=5, branch=mid]
-    E --> F[api-analytics]
-    F --> G[Respuesta: validación requerida]
-    G --> H[Dashboard: medium risk, atención humana]
-```
+| Workflow | Trigger | Descripción |
+|---|---|---|
+| **WF-1** | Cron (periódico) | A7 Bravo → A1 Recolector en cada recarga del histórico |
+| **WF-2** | Webhook POST `/webhook/911-call` | Llamada → A3 Centinela ∥ A2 Correlador → A4 Triador → Panel |
+| **WF-3** | Cron semanal | A8 Auditor — disparidad por alcaldía + sesgo de Centinela |
 
-**Características:**
-- risk_level: 5
-- branch: "mid"
-- human_required: true
-- p0_signals: []
-- Acción: Validación humana, prioridad media
+Cada flecha del flujo operativo es un mensaje en Redis Streams / Valkey. Los workflows se entregan exportados como JSON e importables directamente en n8n.
 
 ---
 
-### Caso 3: Llamada Crítica P0 (Critical)
+## Controles OWASP AI Top 10 (2025) — transversales
 
-```mermaid
-graph LR
-    A[Niño sangrando, emergencia] --> B[Lovable captura]
-    B --> C[n8n webhook]
-    C --> D[api-ingest redacta]
-    D --> E[api-triage: risk=8, P0 detectado]
-    E --> F[best_interest_child=true]
-    F --> G[api-analytics]
-    G --> H[Respuesta: URGENTE, humano requerido]
-    H --> I[Dashboard: CRITICAL, alerta roja]
-```
-
-**Características:**
-- risk_level: 8-10
-- branch: "critical"
-- human_required: true
-- p0_signals: ["sangrado grave", "maltrato infantil"]
-- best_interest_child: true
-- Acción: Atención humana INMEDIATA, prioridad máxima
+| Riesgo OWASP | Control implementado |
+|---|---|
+| Inyección de instrucciones | Instrucciones no expuestas al usuario final · entradas validadas estructuralmente antes de alcanzar el LLM |
+| Manejo inseguro de salidas | Toda salida = JSON validado contra schema de contrato · sin texto libre hacia sistemas posteriores |
+| Envenenamiento de datos | Distribución de entrenamiento declarada públicamente y versión fijada |
+| Divulgación de información sensible | Cero PII en logs, prompts, salidas y bus — regla técnica absoluta |
+| Diseño inseguro de componentes | Agentes solo expuestos como servidores MCP con contratos de interfaz explícitos |
+| Agencia excesiva | El sistema no despacha, no contacta autoridades ni cierra casos autónomamente |
+| Dependencia excesiva en IA | Interfaz muestra justificación de cada sugerencia · operador puede corregir en cualquier momento |
+| Robo o inversión del modelo | Modelos locales (Granite/Ollama · AASIST3 en servidor propio) · sin dependencia de APIs externas |
 
 ---
 
-## Principios de Diseño
+## Infraestructura transversal
 
-### 1. Privacy by Design
-
-- ✅ Redacción automática de PII en punto de entrada
-- ✅ No almacenar transcript original
-- ✅ Normalización de ubicaciones
-- ✅ Minimización de datos
-- ✅ Separación de datos sensibles (schemas)
-
-### 2. Security by Default
-
-- ✅ Servicios en 127.0.0.1 (no expuestos a internet)
-- ✅ No secretos en repositorio
-- ✅ Logs sin PII
-- ✅ Validación de inputs
-- ✅ Autenticación básica en n8n
-
-### 3. Fail-Safe
-
-- ✅ Señales P0 SIEMPRE elevan risk_level >= 6
-- ✅ NNA SIEMPRE activa best_interest_child
-- ✅ Errores no degradan clasificación
-- ✅ Timeouts y reintentos configurados
-
-### 4. Observability
-
-- ✅ trace_id único por llamada
-- ✅ Logs estructurados
-- ✅ Health checks en todos los servicios
-- ✅ Métricas agregadas en analytics
-
-### 5. Scalability (Futuro)
-
-- 🔄 Microservicios independientes (fácil escalar)
-- 🔄 Stateless (fácil replicar)
-- 🔄 Base de datos separada (fácil sharding)
-- 🔄 n8n puede reemplazarse por Kafka/RabbitMQ
+| Capa | Componente | Nota |
+|---|---|---|
+| Runtime de agentes | BeeAI + MCP | Alternativa: cualquier framework compatible con MCP |
+| LLM | Ollama + modelo local | IBM Granite es la referencia · compatible con Llama 3, Mistral, Qwen |
+| Memoria / Bus | Qdrant · nomic-embed · Redis Streams / Valkey | Kafka como alternativa a escala |
+| Separación de datos | `raw` / `core` / `analytics` | Mínimo privilegio por agente · PII nunca cruza la frontera de `raw` |
+| Datos censales | INEGI 2020 (ITER_09CSV20.csv) | CDMX · 9.2M habitantes · por entidad/municipio/localidad |
 
 ---
 
-## Tecnologías Utilizadas
-
-| Componente | Tecnología | Versión | Propósito |
-|------------|-----------|---------|-----------|
-| Frontend | Lovable (React) | - | Dashboard interactivo |
-| Orchestrator | n8n | latest | Orquestación de flujo |
-| Microservices | FastAPI | 0.104 | APIs REST |
-| Language | Python | 3.11 | Backend logic |
-| Database | PostgreSQL | 15 | Almacenamiento |
-| Container | Docker | 20.10+ | Despliegue |
-| Orchestration | Docker Compose | 2.0+ | Multi-container |
-
----
-
-## Limitaciones del MVP
-
-### Arquitectura
-
-- ❌ No balanceo de carga
-- ❌ No caché distribuido (Redis)
-- ❌ No message queue (Kafka/RabbitMQ)
-- ❌ No service mesh
-- ❌ No auto-scaling
-
-### IA
-
-- ❌ No modelos de ML reales
-- ❌ No aprendizaje automático
-- ❌ Clasificación determinista (reglas fijas)
-- ❌ No NLP avanzado
-
-### Datos
-
-- ❌ Datos 100% sintéticos
-- ❌ No integración con sistemas reales
-- ❌ No datos históricos reales
-
-### Seguridad
-
-- ❌ No encriptación end-to-end
-- ❌ No WAF
-- ❌ No rate limiting avanzado
-- ❌ No SIEM
-
----
-
-## Próximos Pasos (Futuro)
-
-1. **Integración Real**
-   - Conectar con C5 real
-   - Integrar con CAD existente
-   - Despacho de unidades
-
-2. **IA Real**
-   - Modelos de NLP (BERT, GPT)
-   - Clasificación con ML
-   - Detección de emociones
-
-3. **Escalabilidad**
-   - Kubernetes
-   - Message queue
-   - Caché distribuido
-
-4. **Seguridad**
-   - Encriptación E2E
-   - WAF
-   - SIEM
-
-5. **Compliance**
-   - Auditoría completa
-   - Certificaciones
-   - Revisión legal
-
----
-
-**Versión:** 1.0.0  
-**Fecha:** 2026-06-06  
-**Autor:** Bob  
-**Propósito:** Demo educativa para hackathon
+*Versión 4.0 · Junio 2026 · CENTINELA_CDMX_IA*
