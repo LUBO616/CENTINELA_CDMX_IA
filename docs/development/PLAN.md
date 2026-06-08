@@ -1,8 +1,8 @@
-# 911 AI Flow Demo - Detailed Implementation Plan
+# CENTINELA_CDMX_IA - Detailed Implementation Plan
 
 ## Executive Summary
 
-This document outlines the complete architecture and implementation plan for the "911 AI Flow Demo" MVP - an educational demonstration of an AI-assisted 911 emergency call flow system for Mexico City.
+This document outlines the complete architecture and implementation plan for the "CENTINELA_CDMX_IA" MVP - an educational demonstration of an AI-assisted 911 emergency call flow system for Mexico City.
 
 **Key Constraints:**
 - Single Fedora 43 host with limited resources
@@ -100,7 +100,7 @@ sequenceDiagram
 
 ### Schema Organization
 
-**PostgreSQL Database: `emergency_demo`**
+**PostgreSQL Database: `centinela_demo`**
 
 Three schemas for data separation:
 1. **raw** - Original redacted conversations
@@ -631,7 +631,7 @@ def predict_risk_zones():
 
 ## n8n Workflow Design
 
-### Workflow: "911 AI Flow Demo - Main"
+### Workflow: "CENTINELA_CDMX_IA - Main"
 
 **Trigger:** Webhook POST `/webhook/911-call`
 
@@ -688,7 +688,7 @@ version: '3.8'
 services:
   postgres:
     image: postgres:15-alpine
-    container_name: emergency-db
+    container_name: centinela-db
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -704,7 +704,7 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - emergency-network
+      - centinela-network
 
   api-ingest:
     build: ./services/api-ingest
@@ -723,7 +723,7 @@ services:
       timeout: 10s
       retries: 3
     networks:
-      - emergency-network
+      - centinela-network
 
   api-triage:
     build: ./services/api-triage
@@ -742,7 +742,7 @@ services:
       timeout: 10s
       retries: 3
     networks:
-      - emergency-network
+      - centinela-network
 
   api-analytics:
     build: ./services/api-analytics
@@ -761,7 +761,7 @@ services:
       timeout: 10s
       retries: 3
     networks:
-      - emergency-network
+      - centinela-network
 
   n8n:
     image: n8nio/n8n:latest
@@ -784,14 +784,14 @@ services:
       - api-triage
       - api-analytics
     networks:
-      - emergency-network
+      - centinela-network
 
 volumes:
   postgres_data:
   n8n_data:
 
 networks:
-  emergency-network:
+  centinela-network:
     driver: bridge
 ```
 
@@ -800,7 +800,7 @@ networks:
 **.env.example:**
 ```bash
 # PostgreSQL Configuration
-POSTGRES_DB=emergency_demo
+POSTGRES_DB=centinela_demo
 POSTGRES_USER=emergency_user
 POSTGRES_PASSWORD=change_this_password_in_production
 
