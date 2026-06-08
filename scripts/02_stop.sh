@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ============================================================================
-# 911 AI Flow Demo - Stop Script
+# CENTINELA_CDMX_IA - Stop Script
 # ============================================================================
 # This script stops all services and optionally removes volumes
 # ============================================================================
@@ -21,7 +21,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 echo -e "${BLUE}============================================================================${NC}"
-echo -e "${BLUE}911 AI Flow Demo - Stopping System${NC}"
+echo -e "${BLUE}CENTINELA_CDMX_IA - Stopping System${NC}"
 echo -e "${BLUE}============================================================================${NC}"
 echo ""
 
@@ -110,9 +110,9 @@ if [ "$REMOVE_IMAGES" = true ]; then
     echo -e "${CYAN}Removing built images...${NC}"
     
     # Remove service images
-    docker rmi 911-ai-flow-demo-api-ingest 2>/dev/null || true
-    docker rmi 911-ai-flow-demo-api-triage 2>/dev/null || true
-    docker rmi 911-ai-flow-demo-api-analytics 2>/dev/null || true
+    docker rmi centinela-cdmx-ia-api-ingest 2>/dev/null || true
+    docker rmi centinela-cdmx-ia-api-triage 2>/dev/null || true
+    docker rmi centinela-cdmx-ia-api-analytics 2>/dev/null || true
     
     echo -e "${GREEN}✓ Images removed${NC}"
     echo ""
@@ -167,4 +167,3 @@ echo -e "To remove everything (volumes + images):"
 echo -e "  ${GREEN}./scripts/02_stop.sh --all${NC}"
 echo ""
 
-# Made with Bob
