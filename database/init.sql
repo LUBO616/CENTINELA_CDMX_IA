@@ -245,7 +245,7 @@ BEGIN
     RAISE NOTICE 'Database initialization complete!';
     RAISE NOTICE 'Schemas created: raw, core, analytics';
     RAISE NOTICE 'Tables created: 4 tables + 3 views';
-    RAISE NOTICE 'Ready for 911 AI Flow Demo';
+    RAISE NOTICE 'Ready for CENTINELA_CDMX_IA';
 END $$;
 
 -- Display table counts
