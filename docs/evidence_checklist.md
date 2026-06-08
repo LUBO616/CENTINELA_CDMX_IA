@@ -1,4 +1,4 @@
-# Checklist de Evidencias - 911 AI Flow Demo
+# Checklist de Evidencias - CENTINELA_CDMX_IA
 
 ## Información General
 
@@ -261,7 +261,7 @@ Validar que el workflow n8n orquesta correctamente los 3 microservicios.
 - [ ] **3.1 Workflow importado**
   - Abrir `http://localhost:5678`
   - Login con `admin/changeme`
-  - Verificar workflow "911 AI Flow Demo - Main" existe
+  - Verificar workflow "CENTINELA_CDMX_IA - Main" existe
 
 - [ ] **3.2 Webhook accesible**
   ```bash
@@ -733,7 +733,7 @@ curl -s http://localhost:8003/analytics/summary | jq '{
 1. **Clonar el repositorio**
    ```bash
    git clone <repo_url>
-   cd 911-ai-flow-demo
+   cd centinela-cdmx-ia
    ```
 
 2. **Leer README.md**
