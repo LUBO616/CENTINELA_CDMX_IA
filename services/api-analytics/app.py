@@ -1,6 +1,6 @@
 """
-911 AI Flow Demo - API Analytics Service
-Stores incidents, calculates metrics, and generates mock predictions
+CENTINELA_CDMX_IA - Agentes A5 Cartógrafo y A6 Estratega
+Analítica geoespacial near-real-time. Hotspots H3 normalizados INEGI. Predicción de cobertura.
 """
 
 import os
@@ -25,9 +25,9 @@ logger = logging.getLogger(__name__)
 
 # Initialize FastAPI
 app = FastAPI(
-    title="911 AI Flow Demo - API Analytics",
-    description="Analytics, metrics, and predictions",
-    version="1.0.0"
+    title="CENTINELA_CDMX_IA - A5 Cartógrafo / A6 Estratega",
+    description="Analítica geoespacial near-real-time · Hotspots H3 · OR-Tools",
+    version="2.0.0"
 )
 
 # CORS configuration
@@ -571,4 +571,3 @@ if __name__ == "__main__":
     port = int(os.getenv("SERVICE_PORT", 8003))
     uvicorn.run(app, host="0.0.0.0", port=port)
 
-# Made with Bob
