@@ -1,4 +1,4 @@
-# Script de Demostración - 911 AI Flow Demo
+# Script de Demostración - CENTINELA_CDMX_IA
 
 ## Información General
 
@@ -46,7 +46,7 @@
 
 ### Script
 
-> "Presentamos **911 AI Flow Demo**, un sistema de clasificación asistida por IA que:
+> "Presentamos **CENTINELA_CDMX_IA**, un sistema de clasificación asistida por IA que:
 > 
 > 1. **Recibe** la transcripción de una llamada (en texto, no audio real)
 > 2. **Redacta** automáticamente datos personales para proteger la privacidad
@@ -267,7 +267,7 @@ curl -s http://localhost:8003/analytics/summary | jq '{
 
 ### Script
 
-> "**911 AI Flow Demo** no es solo tecnología, es una herramienta para **salvar vidas** y **optimizar recursos públicos**. Es un MVP funcional, listo para pilotos en C5 o centros de atención ciudadana. Estamos listos para escalar.
+> "**CENTINELA_CDMX_IA** no es solo tecnología, es una herramienta para **salvar vidas** y **optimizar recursos públicos**. Es un MVP funcional, listo para pilotos en C5 o centros de atención ciudadana. Estamos listos para escalar.
 > 
 > Gracias por su atención. ¿Preguntas?"
 
