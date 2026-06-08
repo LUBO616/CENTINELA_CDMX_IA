@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ============================================================================
-# 911 AI Flow Demo - Seed Demo Data Script
+# CENTINELA_CDMX_IA - Seed Demo Data Script
 # ============================================================================
 # This script seeds the system with demo data for the 3 test scenarios
 # Usage:
@@ -36,7 +36,7 @@ if [ "$MODE" != "direct" ] && [ "$MODE" != "n8n" ]; then
 fi
 
 echo -e "${BLUE}============================================================================${NC}"
-echo -e "${BLUE}911 AI Flow Demo - Seeding Demo Data (Mode: $MODE)${NC}"
+echo -e "${BLUE}CENTINELA_CDMX_IA - Seeding Demo Data (Mode: $MODE)${NC}"
 echo -e "${BLUE}============================================================================${NC}"
 echo ""
 
@@ -314,22 +314,22 @@ echo -e "${BLUE}================================================================
 echo ""
 
 # Count raw conversations
-raw_count=$(docker exec emergency-db psql -U emergency_user -d emergency_demo -t -c "SELECT COUNT(*) FROM raw.conversations;" 2>/dev/null | tr -d ' ')
+raw_count=$(docker exec centinela-db psql -U emergency_user -d centinela_demo -t -c "SELECT COUNT(*) FROM raw.conversations;" 2>/dev/null | tr -d ' ')
 echo -e "${CYAN}Raw Conversations:${NC} $raw_count"
 
 # Count triage results
-triage_count=$(docker exec emergency-db psql -U emergency_user -d emergency_demo -t -c "SELECT COUNT(*) FROM core.triage_results;" 2>/dev/null | tr -d ' ')
+triage_count=$(docker exec centinela-db psql -U emergency_user -d centinela_demo -t -c "SELECT COUNT(*) FROM core.triage_results;" 2>/dev/null | tr -d ' ')
 echo -e "${CYAN}Triage Results:${NC} $triage_count"
 
 # Count incidents
-incident_count=$(docker exec emergency-db psql -U emergency_user -d emergency_demo -t -c "SELECT COUNT(*) FROM analytics.incidents;" 2>/dev/null | tr -d ' ')
+incident_count=$(docker exec centinela-db psql -U emergency_user -d centinela_demo -t -c "SELECT COUNT(*) FROM analytics.incidents;" 2>/dev/null | tr -d ' ')
 echo -e "${CYAN}Incidents:${NC} $incident_count"
 
 echo ""
 
 # Show risk distribution
 echo -e "${CYAN}Risk Level Distribution:${NC}"
-docker exec emergency-db psql -U emergency_user -d emergency_demo -c "
+docker exec centinela-db psql -U emergency_user -d centinela_demo -c "
 SELECT 
     risk_level,
     COUNT(*) as count,
@@ -343,7 +343,7 @@ echo ""
 
 # Show category distribution
 echo -e "${CYAN}Category Distribution:${NC}"
-docker exec emergency-db psql -U emergency_user -d emergency_demo -c "
+docker exec centinela-db psql -U emergency_user -d centinela_demo -c "
 SELECT 
     case_category,
     COUNT(*) as count
@@ -398,4 +398,3 @@ fi
 echo -e "4. Check logs: ${GREEN}./scripts/03_logs.sh${NC}"
 echo ""
 
-# Made with Bob
