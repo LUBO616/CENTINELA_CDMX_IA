@@ -1,13 +1,13 @@
 ===== DOCKER PS =====
 NAME               IMAGE                            COMMAND                  SERVICE         CREATED          STATUS                    PORTS
-api-analytics      911-ai-flow-demo-api-analytics   "uvicorn app:app --h…"   api-analytics   2 minutes ago    Up 2 minutes (healthy)    127.0.0.1:8003->8003/tcp
-api-ingest         911-ai-flow-demo-api-ingest      "uvicorn app:app --h…"   api-ingest      2 minutes ago    Up 2 minutes (healthy)    127.0.0.1:8001->8001/tcp
-api-triage         911-ai-flow-demo-api-triage      "uvicorn app:app --h…"   api-triage      2 minutes ago    Up 2 minutes (healthy)    127.0.0.1:8002->8002/tcp
-emergency-db       postgres:15-alpine               "docker-entrypoint.s…"   postgres        26 minutes ago   Up 26 minutes (healthy)   127.0.0.1:5432->5432/tcp
+api-analytics      centinela-cdmx-ia-api-analytics   "uvicorn app:app --h…"   api-analytics   2 minutes ago    Up 2 minutes (healthy)    127.0.0.1:8003->8003/tcp
+api-ingest         centinela-cdmx-ia-api-ingest      "uvicorn app:app --h…"   api-ingest      2 minutes ago    Up 2 minutes (healthy)    127.0.0.1:8001->8001/tcp
+api-triage         centinela-cdmx-ia-api-triage      "uvicorn app:app --h…"   api-triage      2 minutes ago    Up 2 minutes (healthy)    127.0.0.1:8002->8002/tcp
+centinela-db       postgres:15-alpine               "docker-entrypoint.s…"   postgres        26 minutes ago   Up 26 minutes (healthy)   127.0.0.1:5432->5432/tcp
 n8n-orchestrator   n8nio/n8n:latest                 "tini -- /docker-ent…"   n8n             26 minutes ago   Up 26 minutes (healthy)   127.0.0.1:5678->5678/tcp
 ===== TEST ENVIRONMENT ALL =====
 [0;34m============================================================================[0m
-[0;34m911 AI Flow Demo - Environment Test (Mode: all)[0m
+[0;34mCENTINELA_CDMX_IA - Environment Test (Mode: all)[0m
 [0;34m============================================================================[0m
 
 [0;36m[1/6] Testing Docker and Services[0m
@@ -62,7 +62,7 @@ Testing GET /analytics/predictions... [0;32m✓ PASS[0m (JSON valid, field 'vo
 
 ===== SEED DIRECT =====
 [0;34m============================================================================[0m
-[0;34m911 AI Flow Demo - Seeding Demo Data (Mode: direct)[0m
+[0;34mCENTINELA_CDMX_IA - Seeding Demo Data (Mode: direct)[0m
 [0;34m============================================================================[0m
 
 [0;35m[1/6] Scenario 1: Low Risk - Public Services[0m
