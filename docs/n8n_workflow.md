@@ -1,4 +1,4 @@
-# n8n Workflow - 911 AI Flow Demo
+# n8n Workflow - CENTINELA_CDMX_IA
 
 ## Descripción General
 
@@ -198,7 +198,7 @@ open http://localhost:5678
 ### Paso 2: Importar Workflow
 1. En n8n, hacer clic en el menú superior derecho
 2. Seleccionar "Import from File"
-3. Navegar a: `n8n/workflows/911-ai-flow-demo-main.json`
+3. Navegar a: `n8n/workflows/centinela-cdmx-ia-main.json`
 4. Hacer clic en "Import"
 
 ### Paso 3: Activar Workflow
@@ -399,7 +399,7 @@ console.log('Human Required:', result.human_required);
 
 ### Dashboard en n8n
 1. Ir a "Executions"
-2. Filtrar por workflow "911 AI Flow Demo - Main"
+2. Filtrar por workflow "CENTINELA_CDMX_IA - Main"
 3. Ver estadísticas de ejecución
 
 ## Troubleshooting
