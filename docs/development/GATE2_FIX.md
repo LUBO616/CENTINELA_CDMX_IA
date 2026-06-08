@@ -192,7 +192,7 @@ curl -v -X POST http://localhost:8001/raw-conversations \
 
 ### Test 2: Verificar en Base de Datos
 ```bash
-docker exec -it emergency-db psql -U emergency_user -d emergency_demo -c "
+docker exec -it centinela-db psql -U emergency_user -d centinela_demo -c "
 SELECT 
     call_id,
     trace_id,
@@ -295,7 +295,7 @@ curl -s -X POST http://localhost:8002/triage \
 
 ### Test 5: Verificar en Base de Datos
 ```bash
-docker exec -it emergency-db psql -U emergency_user -d emergency_demo -c "
+docker exec -it centinela-db psql -U emergency_user -d centinela_demo -c "
 SELECT
     call_id,
     risk_level,
@@ -406,7 +406,7 @@ curl -s http://localhost:8003/analytics/summary | jq '.'
 
 ### Verificar que NO se guarda texto original
 ```bash
-docker exec -it emergency-db psql -U emergency_user -d emergency_demo -c "
+docker exec -it centinela-db psql -U emergency_user -d centinela_demo -c "
 SELECT 
     COUNT(*) as total,
     COUNT(*) FILTER (WHERE original_text = '[NOT_STORED_PRIVACY_BY_DESIGN]') as privacy_compliant,
@@ -424,7 +424,7 @@ FROM raw.conversations;
 
 ### Verificar redacción de PII
 ```bash
-docker exec -it emergency-db psql -U emergency_user -d emergency_demo -c "
+docker exec -it centinela-db psql -U emergency_user -d centinela_demo -c "
 SELECT 
     redacted_text,
     redaction_flags
@@ -459,10 +459,10 @@ docker compose logs api-ingest
 ### Error: "Database connection failed"
 ```bash
 # Verificar PostgreSQL
-docker ps | grep emergency-db
+docker ps | grep centinela-db
 
 # Probar conexión
-docker exec -it emergency-db psql -U emergency_user -d emergency_demo -c "SELECT 1;"
+docker exec -it centinela-db psql -U emergency_user -d centinela_demo -c "SELECT 1;"
 
 # Si falla, reiniciar PostgreSQL
 docker compose restart postgres
