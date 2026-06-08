@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ============================================================================
-# 911 AI Flow Demo - Start Script
+# CENTINELA_CDMX_IA - Start Script
 # ============================================================================
 # This script starts services using Docker Compose
 # Usage:
@@ -36,7 +36,7 @@ if [ "$MODE" != "infra" ] && [ "$MODE" != "all" ]; then
 fi
 
 echo -e "${BLUE}============================================================================${NC}"
-echo -e "${BLUE}911 AI Flow Demo - Starting System (Mode: $MODE)${NC}"
+echo -e "${BLUE}CENTINELA_CDMX_IA - Starting System (Mode: $MODE)${NC}"
 echo -e "${BLUE}============================================================================${NC}"
 echo ""
 
@@ -132,9 +132,9 @@ check_service_health() {
 
 # Services to check based on mode
 if [ "$MODE" = "all" ]; then
-    SERVICES=("emergency-db" "n8n-orchestrator" "api-ingest" "api-triage" "api-analytics")
+    SERVICES=("centinela-db" "n8n-orchestrator" "api-ingest" "api-triage" "api-analytics")
 else
-    SERVICES=("emergency-db" "n8n-orchestrator")
+    SERVICES=("centinela-db" "n8n-orchestrator")
 fi
 
 while [ $ELAPSED -lt $MAX_WAIT ]; do
@@ -189,7 +189,7 @@ echo -e "${BLUE}================================================================
 echo ""
 echo -e "${CYAN}PostgreSQL Database:${NC}"
 echo -e "  Host: localhost:5432"
-echo -e "  Database: emergency_demo"
+echo -e "  Database: centinela_demo"
 echo -e "  User: emergency_user"
 echo ""
 echo -e "${CYAN}API Services:${NC}"
@@ -254,7 +254,7 @@ if [ "$MODE" = "infra" ]; then
 else
     echo -e "1. ${CYAN}Access n8n Dashboard:${NC}"
     echo -e "   Open ${GREEN}http://localhost:5678${NC} in your browser"
-    echo -e "   Import workflow from: n8n/workflows/911-ai-flow-demo-main.json"
+    echo -e "   Import workflow from: n8n/workflows/centinela-cdmx-ia-main.json"
     echo ""
     echo -e "2. ${CYAN}Test the System:${NC}"
     echo -e "   Run: ${GREEN}./scripts/04_test_environment.sh all${NC}"
@@ -273,4 +273,3 @@ echo ""
 echo -e "${GREEN}System is ready!${NC}"
 echo ""
 
-# Made with Bob
