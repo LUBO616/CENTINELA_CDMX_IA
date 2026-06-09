@@ -99,7 +99,7 @@ case $SERVICE in
         CONTAINER="api-analytics"
         ;;
     n8n)
-        CONTAINER="n8n-orchestrator"
+        CONTAINER="centinela-n8n"
         ;;
     all)
         CONTAINER=""
