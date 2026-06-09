@@ -91,7 +91,7 @@ else
 fi
 
 # Check n8n container
-if docker ps | grep -q n8n-orchestrator; then
+if docker ps | grep -q centinela-n8n; then
     echo -e "${GREEN}✓ PASS${NC} n8n container is running"
     ((++TESTS_PASSED))
 else
