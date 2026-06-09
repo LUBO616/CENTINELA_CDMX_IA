@@ -104,7 +104,7 @@
 ### Paso 1: Acceder a n8n
 ```bash
 # Verificar que n8n está corriendo
-docker ps | grep n8n-orchestrator
+docker ps | grep centinela-n8n
 
 # Acceder a la interfaz
 open http://localhost:5678
@@ -328,7 +328,7 @@ async function process911Call(transcript, location) {
 # En n8n UI: verificar botón "Active" está en verde
 
 # Reiniciar n8n si es necesario
-docker restart n8n-orchestrator
+docker restart centinela-n8n
 ```
 
 ### Problema: "Service timeout"
