@@ -189,7 +189,7 @@ Respond Success (200)
 ### Paso 1: Acceder a n8n
 ```bash
 # Asegurarse de que n8n está corriendo
-docker ps | grep n8n-orchestrator
+docker ps | grep centinela-n8n
 
 # Acceder a la interfaz web
 open http://localhost:5678
@@ -410,10 +410,10 @@ console.log('Human Required:', result.human_required);
 docker ps | grep n8n
 
 # Reiniciar n8n si es necesario
-docker restart n8n-orchestrator
+docker restart centinela-n8n
 
 # Ver logs de n8n
-docker logs n8n-orchestrator --tail 50
+docker logs centinela-n8n --tail 50
 ```
 
 ### Respuestas lentas
