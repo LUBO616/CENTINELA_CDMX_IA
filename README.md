@@ -539,4 +539,4 @@ Este proyecto puede usarse, modificarse y distribuirse libremente bajo los térm
 
 **CENTINELA_CDMX_IA** · Sistema multiagente para operadores del 911 · Ciudad de México  
 Stack 100% open source · Privacy by Design · Human-in-the-Loop invariable  
-Concienc.ia Hackathon 2026 · Young AI Leaders Community CDMX
+Concienc.ia Hackathon 2026 · Young AI Leaders Community CDMX — origen del proyecto
