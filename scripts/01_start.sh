@@ -132,9 +132,9 @@ check_service_health() {
 
 # Services to check based on mode
 if [ "$MODE" = "all" ]; then
-    SERVICES=("centinela-db" "n8n-orchestrator" "api-ingest" "api-triage" "api-analytics")
+    SERVICES=("centinela-db" "centinela-n8n" "api-ingest" "api-triage" "api-analytics")
 else
-    SERVICES=("centinela-db" "n8n-orchestrator")
+    SERVICES=("centinela-db" "centinela-n8n")
 fi
 
 while [ $ELAPSED -lt $MAX_WAIT ]; do
