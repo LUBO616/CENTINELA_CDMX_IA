@@ -1,5 +1,5 @@
 # ============================================================================
-# 911 AI Flow Demo - Git Ignore
+# CENTINELA_CDMX_IA - .gitignore
 # ============================================================================
 
 # Environment variables (contains secrets)
@@ -140,7 +140,6 @@ local/
 docs/_build/
 site/
 
-# Made with Bob
 
 # Local backups / evidence archives
 backups/
