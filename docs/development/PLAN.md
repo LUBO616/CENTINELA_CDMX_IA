@@ -765,7 +765,7 @@ services:
 
   n8n:
     image: n8nio/n8n:latest
-    container_name: n8n-orchestrator
+    container_name: centinela-n8n
     environment:
       N8N_BASIC_AUTH_ACTIVE: "true"
       N8N_BASIC_AUTH_USER: ${N8N_USER}
