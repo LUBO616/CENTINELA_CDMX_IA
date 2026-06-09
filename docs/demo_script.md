@@ -443,5 +443,5 @@ curl -s http://localhost:8003/analytics/summary | jq '{
 **Versión:** 1.0.0  
 **Fecha:** 2026-06-06  
 **Autor:** Bob  
-**Propósito:** Demo educativa - Hackathon  
+**Propósito:** Prototipo funcional - Hackathon  
 **Duración:** 3-5 minutos
